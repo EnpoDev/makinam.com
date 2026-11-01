@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Listing } from '../types';
 import { useCategories } from '../context/CategoryContext';
@@ -10,6 +10,7 @@ import {
   List,
   LayoutGrid,
   ChevronRight,
+  ChevronLeft,
   Filter,
   RotateCcw,
   Camera,
@@ -179,6 +180,39 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
     setSelectedBrand('');
     setSellerType('all');
     setSearchParams({});
+    setCurrentPage(1);
+  };
+
+  const ITEMS_PER_PAGE = 25;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Reset page when filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    categoryParam,
+    subCategoryParam,
+    queryParam,
+    selectedBrand,
+    selectedCity,
+    minPrice,
+    maxPrice,
+    minYear,
+    maxYear,
+    sellerType,
+    urgentParam,
+    sortBy
+  ]);
+
+  const totalPages = Math.ceil(filteredListings.length / ITEMS_PER_PAGE) || 1;
+  const paginatedListings = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredListings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredListings, currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 120, behavior: 'smooth' });
   };
 
   const formatPrice = (price: number, currency: string) => {
@@ -427,6 +461,11 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
               </h1>
               <span className="text-[11px] text-[#64748b]">
                 Kriterlerinize uygun <strong className="text-[#1e293b]">{filteredListings.length}</strong> ilan listeleniyor
+                {filteredListings.length > ITEMS_PER_PAGE && (
+                  <span>
+                    {' '}({(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredListings.length)} gösteriliyor)
+                  </span>
+                )}
               </span>
             </div>
 
@@ -508,7 +547,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f1f5f9]">
-                  {filteredListings.map((item, index) => (
+                  {paginatedListings.map((item, index) => (
                     <tr
                       key={item.id}
                       onClick={() => navigate(`/ilan/${item.id}`)}
@@ -611,7 +650,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
           ) : (
             /* GALLERY MODE */
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {filteredListings.map((item) => (
+              {paginatedListings.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => navigate(`/ilan/${item.id}`)}
@@ -660,6 +699,73 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* PAGINATION CONTROLS */}
+          {totalPages > 1 && (
+            <div className="mt-4 bg-white border border-[#cbd5e1] rounded-[3px] p-2.5 flex flex-wrap items-center justify-between gap-2 shadow-xs select-none">
+              <div className="text-[11px] text-[#64748b]">
+                Sayfa <strong className="text-[#1e293b]">{currentPage}</strong> / <strong>{totalPages}</strong> (Toplam {filteredListings.length} ilan)
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  className="px-2 py-1 text-[11px] font-bold border border-[#cbd5e1] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 flex items-center gap-0.5 text-[#334155] transition-colors"
+                >
+                  <ChevronLeft size={13} />
+                  <span>Önceki</span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((page) => {
+                    return (
+                      page === 1 ||
+                      page === totalPages ||
+                      Math.abs(page - currentPage) <= 2
+                    );
+                  })
+                  .reduce<(number | string)[]>((acc, page, idx, arr) => {
+                    if (idx > 0 && typeof arr[idx - 1] === 'number' && (page as number) - (arr[idx - 1] as number) > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(page);
+                    return acc;
+                  }, [])
+                  .map((page, idx) =>
+                    typeof page === 'number' ? (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => handlePageChange(page)}
+                        className={`min-w-[28px] h-[28px] px-1 text-[11px] font-bold rounded-[2px] transition-colors ${
+                          currentPage === page
+                            ? 'bg-[#ea580c] text-white'
+                            : 'border border-[#cbd5e1] text-[#334155] hover:bg-slate-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ) : (
+                      <span key={`dots-${idx}`} className="px-1 text-[11px] text-gray-400">
+                        ...
+                      </span>
+                    )
+                  )}
+
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  className="px-2 py-1 text-[11px] font-bold border border-[#cbd5e1] rounded-[2px] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 flex items-center gap-0.5 text-[#334155] transition-colors"
+                >
+                  <span>Sonraki</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
             </div>
           )}
         </div>

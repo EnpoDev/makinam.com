@@ -23,6 +23,15 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
+  const redirectUrl = searchParams.get('redirect') || searchParams.get('returnUrl') || '/';
+
+  const handleSuccessRedirect = () => {
+    if (redirectUrl.startsWith('/giris') || redirectUrl.startsWith('/hesap-ac')) {
+      navigate('/');
+    } else {
+      navigate(redirectUrl);
+    }
+  };
   
   const { login, register, loginWithGoogle, resetPassword, getFriendlyErrorMessage } = useAuth();
 
@@ -64,7 +73,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/');
+      handleSuccessRedirect();
     } catch (err: any) {
       setErrorMessage(getFriendlyErrorMessage(err.code));
     } finally {
@@ -97,7 +106,7 @@ export const LoginPage: React.FC = () => {
         phone,
         accountType === 'kurumsal' ? companyName : undefined
       );
-      navigate('/');
+      handleSuccessRedirect();
     } catch (err: any) {
       setErrorMessage(getFriendlyErrorMessage(err.code));
     } finally {
@@ -110,7 +119,7 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       await loginWithGoogle();
-      navigate('/');
+      handleSuccessRedirect();
     } catch (err: any) {
       if (err.code !== 'auth/popup-closed-by-user') {
         setErrorMessage(getFriendlyErrorMessage(err.code));

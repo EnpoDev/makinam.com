@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /hesabim/
+
+Sitemap: https://makinam.com/sitemap.xml

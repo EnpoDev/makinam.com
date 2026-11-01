@@ -27,7 +27,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const MessagesPage: React.FC = () => {
   useDocumentTitle('Mesajlarım | makinam.com');
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialConvId = searchParams.get('c') || '';
@@ -42,11 +42,16 @@ export const MessagesPage: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const currentUserId = user?.uid || 'guest_user';
+  const currentUserId = user?.uid || '';
   const currentUserName = userProfile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Kullanıcı';
 
   // 1. Subscribe to conversations
   useEffect(() => {
+    if (!currentUserId) {
+      setConversations([]);
+      return;
+    }
+
     const unsubscribe = subscribeToUserConversations(currentUserId, (convs) => {
       setConversations(convs);
       if (!selectedConversationId && convs.length > 0) {
@@ -55,11 +60,11 @@ export const MessagesPage: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUserId]);
+  }, [currentUserId, selectedConversationId]);
 
   // 2. Subscribe to messages of active conversation and mark unread flags as read
   useEffect(() => {
-    if (!selectedConversationId) {
+    if (!selectedConversationId || !currentUserId) {
       setMessages([]);
       return;
     }
@@ -138,6 +143,36 @@ export const MessagesPage: React.FC = () => {
     }
     return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
   };
+
+  if (!user && !loading) {
+    return (
+      <div className="max-w-[1240px] mx-auto px-3 py-16 font-sans text-center">
+        <div className="max-w-md mx-auto bg-white border border-[#e2e8f0] p-8 rounded-[4px] shadow-xs">
+          <div className="w-14 h-14 bg-orange-50 text-[#ea580c] rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-200">
+            <MessageSquare size={26} className="text-[#ea580c]" />
+          </div>
+          <h2 className="text-[18px] font-black text-[#1e293b]">Mesajlarınızı Görüntülemek İçin Giriş Yapın</h2>
+          <p className="text-[12.5px] text-[#64748b] mt-1.5 mb-6 leading-relaxed">
+            Alıcılar ve satıcılarla yaptığınız görüşmeleri takip etmek, yeni teklifleri yanıtlamak ve güvenli mesajlaşmak için lütfen üye girişi yapınız.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/giris-yap?redirect=/hesabim/mesajlarim"
+              className="w-full sm:w-auto px-6 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white text-[12.5px] font-bold rounded-[3px] transition-colors shadow-xs"
+            >
+              Giriş Yap / Üye Ol
+            </Link>
+            <Link
+              to="/"
+              className="w-full sm:w-auto px-5 py-2.5 border border-[#cbd5e1] hover:bg-slate-50 text-[#475569] text-[12.5px] font-bold rounded-[3px] transition-colors"
+            >
+              Pazaryerine Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f1f4f8] py-4 font-sans text-[#1e293b]">

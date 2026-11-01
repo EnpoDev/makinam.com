@@ -38,7 +38,7 @@ const TURKISH_CITIES = [
 export const ProfilePage: React.FC = () => {
   useDocumentTitle('Hesap ve Profil Ayarları | makinam.com');
   const navigate = useNavigate();
-  const { user, userProfile, updateUserProfile } = useAuth();
+  const { user, userProfile, updateUserProfile, loading: authLoading } = useAuth();
 
   // Form states
   const [displayName, setDisplayName] = useState('');
@@ -131,6 +131,36 @@ export const ProfilePage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (!user && !authLoading) {
+    return (
+      <div className="max-w-[1000px] mx-auto px-3 py-16 font-sans text-center">
+        <div className="max-w-md mx-auto bg-white border border-[#e2e8f0] p-8 rounded-[4px] shadow-xs">
+          <div className="w-14 h-14 bg-orange-50 text-[#ea580c] rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-200">
+            <User size={26} className="text-[#ea580c]" />
+          </div>
+          <h2 className="text-[18px] font-black text-[#1e293b]">Profilinizi Yönetmek İçin Giriş Yapın</h2>
+          <p className="text-[12.5px] text-[#64748b] mt-1.5 mb-6 leading-relaxed">
+            Hesap bilgilerinizi, iletişim ve fatura detaylarınızı veya IBAN ve ödeme bilgilerinizi güncellemek için lütfen üye girişi yapınız.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/giris-yap?redirect=/hesabim/profil"
+              className="w-full sm:w-auto px-6 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white text-[12.5px] font-bold rounded-[3px] transition-colors shadow-xs"
+            >
+              Giriş Yap / Üye Ol
+            </Link>
+            <Link
+              to="/"
+              className="w-full sm:w-auto px-5 py-2.5 border border-[#cbd5e1] hover:bg-slate-50 text-[#475569] text-[12.5px] font-bold rounded-[3px] transition-colors"
+            >
+              Pazaryerine Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1000px] mx-auto px-3 py-6 font-sans">

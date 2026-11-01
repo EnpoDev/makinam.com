@@ -2,6 +2,8 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { ScrollToTop } from './components/ScrollToTop';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { AuthProvider } from './context/AuthContext';
 import { FavoritesProvider, useFavorites } from './context/FavoritesContext';
@@ -330,15 +332,18 @@ export const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <CategoryProvider>
-          <FavoritesProvider>
-            <AppContent />
-          </FavoritesProvider>
-        </CategoryProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ScrollToTop />
+        <AuthProvider>
+          <CategoryProvider>
+            <FavoritesProvider>
+              <AppContent />
+            </FavoritesProvider>
+          </CategoryProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 
