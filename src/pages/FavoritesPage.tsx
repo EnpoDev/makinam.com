@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Listing } from '../types';
 import { useFavorites } from '../context/FavoritesContext';
-import { handleImageFallback } from '../utils/image';
+import { handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface FavoritesPageProps {
@@ -170,7 +170,7 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({ listings }) => {
                     <td className="py-2.5 px-3">
                       <Link to={`/ilan/${item.id}`} className="block relative group">
                         <img
-                          src={item.images[0]}
+                          src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
                           alt={item.title}
                           onError={handleImageFallback}
                           className="w-[72px] h-[52px] object-cover rounded-[3px] border border-[#cbd5e1] group-hover:opacity-90"
@@ -217,8 +217,8 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({ listings }) => {
 
                     {/* Seller */}
                     <td className="py-2.5 px-3 text-[11.5px] whitespace-nowrap">
-                      <div className="font-semibold text-[#334155]">{item.seller.name}</div>
-                      <div className="text-[10.5px] text-[#64748b]">{item.seller.type}</div>
+                      <div className="font-semibold text-[#334155]">{item.seller?.name || 'Satıcı'}</div>
+                      <div className="text-[10.5px] text-[#64748b]">{item.seller?.type || 'Bireysel'}</div>
                     </td>
 
                     {/* Actions */}

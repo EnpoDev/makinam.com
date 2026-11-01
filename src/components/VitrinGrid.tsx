@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Listing } from '../types';
 import { PlusCircle, Clock, Sparkles, Heart, ShieldCheck } from 'lucide-react';
 import { useFavorites } from '../context/FavoritesContext';
-import { handleImageFallback } from '../utils/image';
+import { handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 
 interface VitrinGridProps {
   listings: Listing[];
@@ -75,7 +75,7 @@ export const VitrinGrid: React.FC<VitrinGridProps> = ({ listings, onOpenPostAd }
             {/* Thumbnail Image */}
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[2px] bg-[#f8fafc] mb-1.5 border border-[#f1f5f9]">
               <img
-                src={item.images[0]}
+                src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
                 alt={item.title}
                 onError={handleImageFallback}
                 className="w-full h-full object-cover group-hover:opacity-95"
@@ -136,7 +136,7 @@ export const VitrinGrid: React.FC<VitrinGridProps> = ({ listings, onOpenPostAd }
               </span>
               <div className="flex items-center justify-between text-[10px] text-[#64748b] mt-0.5">
                 <span className="truncate">{item.city}</span>
-                <span className="shrink-0">{item.seller.type === 'Sahibinden' ? 'Sahibinden' : 'Mağaza'}</span>
+                <span className="shrink-0">{item.seller?.type === 'Sahibinden' ? 'Sahibinden' : 'Mağaza'}</span>
               </div>
             </div>
           </div>

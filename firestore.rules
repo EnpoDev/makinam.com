@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // LISTINGS: Publicly readable; authenticated or guests can create; updates permitted for viewsCount and owners
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if request.resource.data.title is string && request.resource.data.price is number;
+      allow update: if true; // Allows view count increment and listing management
+      allow delete: if isAuthenticated();
+    }
+
+    // USERS: Public readable (seller contact cards); owners & authenticated users can write
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() || isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // CONVERSATIONS: Direct messaging between buyers and sellers
+    match /conversations/{conversationId} {
+      allow read, write: if isAuthenticated();
+      
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // STORE APPLICATIONS: Corporate store applications submitted from the landing page
+    match /store_applications/{applicationId} {
+      allow read: if isAuthenticated();
+      allow create: if true; // Any visitor can apply for corporate membership
+      allow update, delete: if isAuthenticated();
+    }
+
+    // SETTINGS: Portal configuration, popular brands, preset photos, makinam guvende info
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // CATEGORIES: System categories and hierarchy
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // FAQS: Frequently asked questions for Help Center
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+  }
+}

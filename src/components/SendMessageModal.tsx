@@ -16,7 +16,7 @@ import {
 import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { sendListingMessage } from '../lib/messageService';
-import { handleImageFallback } from '../utils/image';
+import { handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 
 interface SendMessageModalProps {
   isOpen: boolean;
@@ -150,7 +150,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
 
             <div className="p-3 bg-[#f8fafc] border border-[#e2e8f0] rounded-[4px] text-left flex items-center gap-3">
               <img
-                src={listing.images[0]}
+                src={listing.images?.[0] || DEFAULT_MACHINE_IMAGE}
                 alt={listing.title}
                 onError={handleImageFallback}
                 className="w-12 h-10 object-cover rounded-[2px] border border-[#cbd5e1] shrink-0"
@@ -199,7 +199,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
             {/* Mini Listing Card */}
             <div className="p-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-[3px] flex items-center gap-2.5">
               <img
-                src={listing.images[0]}
+                src={listing.images?.[0] || DEFAULT_MACHINE_IMAGE}
                 alt={listing.title}
                 onError={handleImageFallback}
                 className="w-14 h-11 object-cover rounded-[2px] border border-[#cbd5e1] shrink-0"

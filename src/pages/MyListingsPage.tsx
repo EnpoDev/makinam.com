@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { handleImageFallback } from '../utils/image';
+import { handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface MyListingsPageProps {
@@ -397,7 +397,7 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
                       <td className="py-2.5 px-3">
                         <Link to={`/ilan/${item.id}`} className="block relative group">
                           <img
-                            src={item.images[0]}
+                            src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
                             alt={item.title}
                             onError={handleImageFallback}
                             className="w-[72px] h-[52px] object-cover rounded-[3px] border border-[#cbd5e1] group-hover:opacity-90"

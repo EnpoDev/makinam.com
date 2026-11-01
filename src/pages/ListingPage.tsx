@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Listing } from '../types';
 import { useCategories } from '../context/CategoryContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { handleImageFallback } from '../utils/image';
+import { handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 import { matchesListingSearch } from '../utils/search';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
@@ -119,7 +119,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
       if (maxYear && item.year > Number(maxYear)) return false;
 
       // Seller type
-      if (sellerType !== 'all' && item.seller.type !== sellerType) return false;
+      if (sellerType !== 'all' && item.seller?.type !== sellerType) return false;
 
       // Urgent
       if (urgentParam && !item.isUrgent) return false;
@@ -129,12 +129,30 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
 
       return true;
     }).sort((a, b) => {
-      if (sortBy === 'price_asc') return a.price - b.price;
-      if (sortBy === 'price_desc') return b.price - a.price;
-      if (sortBy === 'year_desc') return b.year - a.year;
-      if (sortBy === 'hours_asc') return a.hours - b.hours;
-      // Default: date_desc
-      return 0;
+      if (sortBy === 'price_asc') return (a.price || 0) - (b.price || 0);
+      if (sortBy === 'price_desc') return (b.price || 0) - (a.price || 0);
+      if (sortBy === 'year_desc') return (b.year || 0) - (a.year || 0);
+      if (sortBy === 'hours_asc') return (a.hours || 0) - (b.hours || 0);
+      
+      // Parse real creation / listing timestamp
+      const getTime = (item: any): number => {
+        if (item.createdAt?.toMillis) return item.createdAt.toMillis();
+        if (item.createdAt?.seconds) return item.createdAt.seconds * 1000;
+        if (typeof item.createdAt === 'number') return item.createdAt;
+        if (typeof item.createdAt === 'string') {
+          const parsed = Date.parse(item.createdAt);
+          if (!isNaN(parsed)) return parsed;
+        }
+        if (item.id && typeof item.id === 'string') {
+          const match = item.id.match(/\d{6,}/);
+          if (match) return Number(match[0]);
+        }
+        return 0;
+      };
+
+      if (sortBy === 'date_asc') return getTime(a) - getTime(b);
+      // Default: date_desc (newest first)
+      return getTime(b) - getTime(a);
     });
   }, [
     listings,
@@ -517,15 +535,15 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                       <td className="py-2 px-2 align-middle">
                         <div className="w-[56px] h-[42px] rounded-[2px] overflow-hidden bg-gray-100 relative shrink-0 border border-[#cbd5e1]">
                           <img
-                            src={item.images[0]}
+                            src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
                             alt={item.title}
                             onError={handleImageFallback}
                             className="w-full h-full object-cover"
                             loading="lazy"
                           />
-                          {item.images.length > 1 && (
+                          {(item.images?.length || 0) > 1 && (
                             <span className="absolute bottom-0 right-0 bg-black/75 text-white text-[8px] px-1 rounded-tl flex items-center gap-0.5">
-                              <Camera size={8} /> {item.images.length}
+                              <Camera size={8} /> {item.images?.length}
                             </span>
                           )}
                         </div>
@@ -602,7 +620,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                   <div>
                     <div className="relative aspect-[4/3] rounded-[2px] overflow-hidden bg-gray-100 mb-1.5 border border-[#f1f5f9]">
                       <img
-                        src={item.images[0]}
+                        src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
                         alt={item.title}
                         onError={handleImageFallback}
                         className="w-full h-full object-cover"

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Copy, Check, Mail, Share2 } from 'lucide-react';
 import { Listing } from '../types';
+import { handleImageFallback } from '../utils/image';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -125,6 +126,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, listing
             <img
               src={listing.images[0]}
               alt={listing.title}
+              onError={handleImageFallback}
               className="w-14 h-11 object-cover rounded-[2px] border border-[#cbd5e1] shrink-0"
             />
           ) : (

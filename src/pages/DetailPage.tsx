@@ -4,7 +4,7 @@ import { Listing } from '../types';
 import { useFavorites } from '../context/FavoritesContext';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { handleImageFallback } from '../utils/image';
+import { handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 import { ShareModal } from '../components/ShareModal';
 import { SendMessageModal } from '../components/SendMessageModal';
 import { MakinamGuvendePurchaseModal } from '../components/MakinamGuvendePurchaseModal';
@@ -343,18 +343,18 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
           <div className="bg-white border border-[#cbd5e1] rounded-[3px] p-2 mb-3 shadow-xs">
             <div className="relative aspect-[16/10] bg-[#122438] rounded-[2px] overflow-hidden flex items-center justify-center">
               <img
-                src={listing.images[activeImageIndex] || listing.images[0]}
+                src={listing.images?.[activeImageIndex] || listing.images?.[0] || DEFAULT_MACHINE_IMAGE}
                 alt={listing.title}
                 onError={handleImageFallback}
                 className="max-h-full max-w-full object-contain"
               />
 
-              {listing.images.length > 1 && (
+              {(listing.images?.length || 0) > 1 && (
                 <>
                   <button
                     onClick={() =>
                       setActiveImageIndex((prev) =>
-                        prev === 0 ? listing.images.length - 1 : prev - 1
+                        prev === 0 ? (listing.images?.length || 1) - 1 : prev - 1
                       )
                     }
                     className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-[2px] transition-colors"
@@ -364,7 +364,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
                   <button
                     onClick={() =>
                       setActiveImageIndex((prev) =>
-                        prev === listing.images.length - 1 ? 0 : prev + 1
+                        prev === (listing.images?.length || 1) - 1 ? 0 : prev + 1
                       )
                     }
                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-[2px] transition-colors"
@@ -376,14 +376,14 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
 
               {/* Photo Counter */}
               <div className="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-mono px-2 py-0.5 rounded-[2px]">
-                {activeImageIndex + 1} / {listing.images.length}
+                {activeImageIndex + 1} / {listing.images?.length || 1}
               </div>
             </div>
 
             {/* Thumbnail Strip */}
-            {listing.images.length > 1 && (
+            {(listing.images?.length || 0) > 1 && (
               <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
-                {listing.images.map((img, idx) => (
+                {listing.images?.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
