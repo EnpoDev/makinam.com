@@ -65,6 +65,11 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
       return;
     }
 
+    if (user && listing.userId && (user.uid === listing.userId || user.email === listing.userId)) {
+      setErrorMessage('Kendi ilanınıza mesaj gönderemezsiniz.');
+      return;
+    }
+
     const finalName = user
       ? userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'Kullanıcı'
       : senderName.trim() || 'Ziyaretçi';

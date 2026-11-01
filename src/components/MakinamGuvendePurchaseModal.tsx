@@ -58,6 +58,11 @@ export const MakinamGuvendePurchaseModal: React.FC<MakinamGuvendePurchaseModalPr
       return;
     }
 
+    if (user && listing.userId && (user.uid === listing.userId || user.email === listing.userId)) {
+      setErrorMsg('Kendi ilanınızı satın alamazsınız.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const buyerId = user ? user.uid : `guest_${Date.now()}`;

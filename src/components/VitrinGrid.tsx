@@ -20,6 +20,8 @@ export const VitrinGrid: React.FC<VitrinGridProps> = ({ listings, onOpenPostAd }
   };
 
   const displayedListings = listings.filter((item) => {
+    // Only display active listings in the vitrin
+    if (item.status && item.status !== 'active') return false;
     if (activeTab === 'urgent') return item.isUrgent;
     return true;
   });

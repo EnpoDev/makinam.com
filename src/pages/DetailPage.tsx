@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Listing } from '../types';
+import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -18,6 +19,7 @@ import {
   AlertTriangle,
   Phone,
   MessageSquare,
+  MessageCircle,
   ShieldCheck,
   CheckCircle2,
   MapPin,
@@ -26,7 +28,9 @@ import {
   Award,
   Truck,
   FileText,
-  Camera
+  Camera,
+  Edit3,
+  XCircle
 } from 'lucide-react';
 
 interface DetailPageProps {
@@ -128,6 +132,7 @@ const DetailPageSkeleton: React.FC = () => {
 export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = false }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, userProfile } = useAuth();
 
   const [directDoc, setDirectDoc] = useState<Listing | null>(null);
   const [isFetchingDirect, setIsFetchingDirect] = useState<boolean>(true);
@@ -257,13 +262,40 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
     return `${price.toLocaleString('tr-TR')} ${currency === 'TL' ? 'TL' : currency}`;
   };
 
-  useDocumentTitle(
-    listing
-      ? `${listing.title} (${listing.year}) - ${formatPrice(listing.price, listing.currency)} | makinam.com`
-      : 'İlan Detayı | makinam.com'
+  const isSold = listing.status === 'sold';
+  const isPassive = listing.status === 'passive';
+  const isInactive = isSold || isPassive;
+
+  const isOwner = Boolean(
+    user && (
+      (listing.userId && user.uid === listing.userId) ||
+      (listing.userId && user.email === listing.userId) ||
+      (userProfile?.phoneNumber && listing.seller?.phone && listing.seller.phone === userProfile.phoneNumber) ||
+      (userProfile?.displayName && listing.seller?.name && listing.seller.name.toLowerCase() === userProfile.displayName.toLowerCase())
+    )
   );
 
-  const fullPhone = listing.seller?.phone?.replace('**', '45') || '0850 123 45 67';
+  const rawPhone = listing.seller?.phone?.replace(/\*\*/g, '45') || '';
+  const hasHiddenPhone = !rawPhone || rawPhone.toLowerCase().includes('mesaj') || rawPhone.toLowerCase().includes('ulaş');
+  const fullPhone = hasHiddenPhone ? '' : rawPhone;
+  const cleanPhoneDigits = fullPhone.replace(/[^0-9]/g, '');
+  const isValidPhone = cleanPhoneDigits.length >= 10;
+  const isMobile = cleanPhoneDigits.startsWith('05') || cleanPhoneDigits.startsWith('5') || (cleanPhoneDigits.startsWith('905') && cleanPhoneDigits.length === 12);
+
+  const waPhone = cleanPhoneDigits.startsWith('90')
+    ? cleanPhoneDigits
+    : cleanPhoneDigits.startsWith('0')
+    ? '9' + cleanPhoneDigits
+    : '90' + cleanPhoneDigits;
+
+  const waMessage = `Merhaba, makinam.com'daki "${listing.title}" (İlan No: ${listing.adNo || listing.id}) ilanınız hakkında bilgi almak istiyorum.`;
+  const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`;
+
+  useDocumentTitle(
+    listing
+      ? `${isSold ? '[SATILDI] ' : isPassive ? '[PASİF] ' : ''}${listing.title} (${listing.year}) - ${formatPrice(listing.price, listing.currency)} | makinam.com`
+      : 'İlan Detayı | makinam.com'
+  );
 
   return (
     <div className="max-w-[1240px] mx-auto px-3 py-3 font-sans">
@@ -334,6 +366,31 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
           </button>
         </div>
       </div>
+
+      {/* INACTIVE / SOLD STATUS ALERT BANNER */}
+      {isSold && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-[3px] flex items-center gap-2.5 text-red-900 shadow-xs">
+          <XCircle size={20} className="text-red-600 shrink-0" />
+          <div>
+            <div className="font-bold text-[13px]">Bu İlan Satılmıştır</div>
+            <div className="text-[11.5px] text-red-700">
+              Bu makine ilanı satıcı tarafından satıldı olarak işaretlenmiştir. İlan sadece arşiv ve referans amaçlı görüntülenmektedir.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPassive && (
+        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-[3px] flex items-center gap-2.5 text-amber-900 shadow-xs">
+          <AlertTriangle size={20} className="text-amber-600 shrink-0" />
+          <div>
+            <div className="font-bold text-[13px]">Bu İlan Yayından Kaldırılmıştır</div>
+            <div className="text-[11.5px] text-amber-700">
+              Satıcı bu ilanı geçici veya kalıcı olarak yayından kaldırmıştır.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. MAIN 2-COLUMN CLASSIFIED DETAIL LAYOUT */}
       <div className="flex flex-col lg:flex-row gap-3.5">
@@ -557,47 +614,96 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
               </div>
             </div>
 
-            {/* Makinam Güvende Secure Buy CTA */}
-            {listing.isGuvende && (
-              <button
-                type="button"
-                onClick={() => setIsGuvendeModalOpen(true)}
-                className="w-full bg-[#15803d] hover:bg-[#166534] text-white py-2.5 rounded-[2px] text-center font-bold text-[12.5px] flex items-center justify-center gap-1.5 shadow-xs transition-colors"
-              >
-                <ShieldCheck size={16} />
-                <span>Makinam Güvende ile Satın Al</span>
-              </button>
-            )}
-
-            {/* Phone Number Reveal */}
-            <div>
-              {phoneRevealed ? (
-                <a
-                  href={`tel:${fullPhone}`}
-                  className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white py-2 rounded-[2px] text-center font-bold text-[13px] flex items-center justify-center gap-1.5 shadow-xs"
+            {/* OWNER ACTIONS vs BUYER ACTIONS */}
+            {isOwner ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-[3px] p-3 text-center space-y-2">
+                <div className="font-bold text-[12.5px] text-amber-900 flex items-center justify-center gap-1.5">
+                  <Edit3 size={15} /> Bu Sizin İlanınız
+                </div>
+                <p className="text-[11px] text-amber-700 leading-snug">
+                  İlanınızı güncellemek, fiyatını değiştirmek veya durumunu yönetmek için ilanlar sayfanıza gidebilirsiniz.
+                </p>
+                <Link
+                  to="/hesabim/ilanlarim"
+                  className="w-full bg-[#19324d] hover:bg-[#122438] text-white py-2 rounded-[2px] text-center font-bold text-[12px] flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                 >
-                  <Phone size={14} />
-                  <span>{fullPhone}</span>
-                </a>
-              ) : (
+                  <Edit3 size={14} />
+                  <span>İlanımı Yönet & Düzenle</span>
+                </Link>
+              </div>
+            ) : isInactive ? (
+              <div className="bg-gray-100 border border-gray-300 rounded-[3px] p-3 text-center space-y-1">
+                <div className="font-bold text-[12px] text-gray-700">
+                  {isSold ? 'İlan Satılmıştır' : 'İlan Yayında Değildir'}
+                </div>
+                <p className="text-[11px] text-gray-500">
+                  Bu ilan için mesajlaşma ve satın alma işlemleri kapatılmıştır.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Makinam Güvende Secure Buy CTA */}
+                {listing.isGuvende && (
+                  <button
+                    type="button"
+                    onClick={() => setIsGuvendeModalOpen(true)}
+                    className="w-full bg-[#15803d] hover:bg-[#166534] text-white py-2.5 rounded-[2px] text-center font-bold text-[12.5px] flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                  >
+                    <ShieldCheck size={16} />
+                    <span>Makinam Güvende ile Satın Al</span>
+                  </button>
+                )}
+
+                {/* Direct WhatsApp Action for Mobile Phone Numbers */}
+                {isMobile && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white py-2 rounded-[2px] text-center font-bold text-[12px] flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                  >
+                    <MessageCircle size={15} />
+                    <span>WhatsApp ile İletişime Geç</span>
+                  </a>
+                )}
+
+                {/* Phone Number Reveal */}
+                {isValidPhone ? (
+                  <div>
+                    {phoneRevealed ? (
+                      <a
+                        href={`tel:${cleanPhoneDigits}`}
+                        className="w-full bg-[#16a34a] hover:bg-[#15803d] text-white py-2 rounded-[2px] text-center font-bold text-[13px] flex items-center justify-center gap-1.5 shadow-xs"
+                      >
+                        <Phone size={14} />
+                        <span>{fullPhone}</span>
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => setPhoneRevealed(true)}
+                        className="w-full bg-[#0284c7] hover:bg-[#0369a1] text-white py-2 rounded-[2px] text-center font-bold text-[13px] flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                      >
+                        <Phone size={14} />
+                        <span>Telefon Numarasını Göster</span>
+                      </button>
+                    )}
+                  </div>
+                ) : hasHiddenPhone ? (
+                  <div className="p-2 bg-slate-50 border border-slate-200 rounded-[2px] text-[10.5px] text-[#64748b] text-center">
+                    Satıcı telefon numarasını gizlemiştir. Mesaj göndererek ulaşabilirsiniz.
+                  </div>
+                ) : null}
+
+                {/* In-App Message Button */}
                 <button
-                  onClick={() => setPhoneRevealed(true)}
-                  className="w-full bg-[#0284c7] hover:bg-[#0369a1] text-white py-2 rounded-[2px] text-center font-bold text-[13px] flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                  onClick={() => setIsMessageModalOpen(true)}
+                  className="w-full border border-[#cbd5e1] hover:border-[#ea580c] hover:bg-orange-50/40 hover:text-[#ea580c] text-[#334155] py-2 rounded-[2px] text-center font-bold text-[12px] flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
                 >
-                  <Phone size={14} />
-                  <span>Telefon Numarasını Göster</span>
+                  <MessageSquare size={14} className="text-[#ea580c]" />
+                  <span>Site İçi Mesaj Gönder</span>
                 </button>
-              )}
-            </div>
-
-            {/* Message Button */}
-            <button
-              onClick={() => setIsMessageModalOpen(true)}
-              className="w-full border border-[#cbd5e1] hover:border-[#ea580c] hover:bg-orange-50/40 hover:text-[#ea580c] text-[#334155] py-2 rounded-[2px] text-center font-bold text-[12px] flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
-            >
-              <MessageSquare size={14} className="text-[#ea580c]" />
-              <span>Satıcıya Mesaj Gönder</span>
-            </button>
+              </>
+            )}
           </div>
 
           {/* Secure Trade Badge */}

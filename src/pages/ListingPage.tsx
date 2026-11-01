@@ -94,6 +94,9 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
   // Filtering logic
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
+      // Only display active listings in public search & browse
+      if (item.status && item.status !== 'active') return false;
+
       // Category filter
       if (categoryParam && item.category !== categoryParam) return false;
       if (subCategoryParam && item.subCategory !== subCategoryParam) return false;
