@@ -59,5 +59,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAuthenticated();
     }
+
+    // AUDIT LOGS: Operational tracking for administrator and representative actions
+    match /audit_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }

@@ -46,10 +46,15 @@ import {
   Key,
   Shield,
   Lock,
-  Sliders
+  Sliders,
+  Download,
+  FolderTree,
+  CheckCheck,
+  Activity,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Listing, UserProfile, StoreApplication } from '../types';
+import { Listing, UserProfile, StoreApplication, Category } from '../types';
 import {
   PERMISSION_CATEGORIES,
   ALL_PERMISSION_IDS,
@@ -73,6 +78,17 @@ import {
 } from '../lib/adminService';
 import { deleteListingFromFirestore } from '../lib/firebase';
 import {
+  subscribeToCategories,
+  saveCategoryToFirestore,
+  deleteCategoryFromFirestore
+} from '../lib/categoryService';
+import {
+  logAdminAction,
+  subscribeToAuditLogs,
+  AuditLog
+} from '../lib/auditService';
+import { exportToCSV } from '../utils/csvExport';
+import {
   subscribeToPopularBrands,
   subscribeToPopularSearches,
   PopularBrandItem
@@ -85,7 +101,7 @@ interface AdminPageProps {
   onDeleteListing?: (id: string, images?: string[]) => Promise<void>;
 }
 
-type AdminTab = 'dashboard' | 'applications' | 'listings' | 'users' | 'settings';
+type AdminTab = 'dashboard' | 'applications' | 'listings' | 'users' | 'categories' | 'settings';
 
 export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
   useDocumentTitle('Yönetim Konsolu | makinam.com');
@@ -104,9 +120,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
   const [rejectAppId, setRejectAppId] = useState<string>('');
   const [rejectReason, setRejectReason] = useState<string>('Evraklar eksik veya şirket faal değil.');
 
-  // Listings Management State
+  // Listings Management State & Quick Filters
   const [listingSearch, setListingSearch] = useState<string>('');
   const [listingStatusFilter, setListingStatusFilter] = useState<string>('all');
+  const [listingCategoryFilter, setListingCategoryFilter] = useState<string>('all');
+  const [listingCityFilter, setListingCityFilter] = useState<string>('all');
+  const [listingFlagFilter, setListingFlagFilter] = useState<string>('all');
+  const [selectedListingIds, setSelectedListingIds] = useState<string[]>([]);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
 
   // Users Management State
@@ -116,6 +136,18 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
   const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
   const [userTypeFilter, setUserTypeFilter] = useState<string>('all');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+
+  // Category CMS State
+  const [categoriesList, setCategoriesList] = useState<Category[]>([]);
+  const [newCatModalOpen, setNewCatModalOpen] = useState<boolean>(false);
+  const [newCatName, setNewCatName] = useState<string>('');
+  const [newCatSlug, setNewCatSlug] = useState<string>('');
+  const [newCatIcon, setNewCatIcon] = useState<string>('Layers');
+  const [selectedCatForSub, setSelectedCatForSub] = useState<Category | null>(null);
+  const [newSubCatName, setNewSubCatName] = useState<string>('');
+
+  // Operational Audit Log State
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   // Settings CMS State
   const [brands, setBrands] = useState<PopularBrandItem[]>([]);
@@ -132,6 +164,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  const operatorName = userProfile?.displayName || user?.displayName || user?.email || 'Admin Operatör';
 
   // 1. Subscribe to Store Applications in real-time
   useEffect(() => {
@@ -153,7 +187,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
     fetchUsers();
   }, []);
 
-  // 3. Subscribe to portal settings
+  // 3. Subscribe to Categories
+  useEffect(() => {
+    const unsubscribe = subscribeToCategories(setCategoriesList);
+    return () => unsubscribe();
+  }, []);
+
+  // 4. Subscribe to Audit Logs
+  useEffect(() => {
+    const unsubscribe = subscribeToAuditLogs(setAuditLogs, 15);
+    return () => unsubscribe();
+  }, []);
+
+  // 5. Subscribe to portal settings
   useEffect(() => {
     const unsubBrands = subscribeToPopularBrands(setBrands);
     const unsubSearches = subscribeToPopularSearches(setSearches);
@@ -185,6 +231,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
   const filteredListings = useMemo(() => {
     return listings.filter((l) => {
       if (listingStatusFilter !== 'all' && (l.status || 'active') !== listingStatusFilter) return false;
+      if (listingCategoryFilter !== 'all' && l.category !== listingCategoryFilter) return false;
+      if (listingCityFilter !== 'all' && l.city !== listingCityFilter) return false;
+      if (listingFlagFilter === 'vitrin' && !l.isVitrin) return false;
+      if (listingFlagFilter === 'guvende' && !l.isGuvende) return false;
+      if (listingFlagFilter === 'urgent' && !l.isUrgent) return false;
+
       if (listingSearch.trim()) {
         const q = listingSearch.toLowerCase().trim();
         const matchTitle = l.title.toLowerCase().includes(q);
@@ -197,7 +249,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
       }
       return true;
     });
-  }, [listings, listingStatusFilter, listingSearch]);
+  }, [listings, listingStatusFilter, listingCategoryFilter, listingCityFilter, listingFlagFilter, listingSearch]);
 
   // Filtered users
   const filteredUsers = useMemo(() => {
@@ -319,10 +371,315 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
     setIsProcessing(false);
 
     if (res.success) {
+      await logAdminAction(
+        'LISTING_UPDATE',
+        `İlan güncellendi: "${editingListing.title}" (İlan No: ${editingListing.adNo || editingListing.id})`,
+        operatorName,
+        'listing',
+        editingListing.id
+      );
       showToast('İlan tüm detaylarıyla başarıyla güncellendi.', 'success');
       setEditingListing(null);
     } else {
       showToast(`Güncelleme hatası: ${res.error}`, 'error');
+    }
+  };
+
+  // BULK LISTING ACTIONS
+  const handleSelectAllListings = () => {
+    if (selectedListingIds.length === filteredListings.length) {
+      setSelectedListingIds([]);
+    } else {
+      setSelectedListingIds(filteredListings.map((l) => l.id));
+    }
+  };
+
+  const handleToggleSelectListing = (id: string) => {
+    setSelectedListingIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkToggleFlag = async (flag: 'isVitrin' | 'isUrgent' | 'isGuvende', value: boolean) => {
+    if (selectedListingIds.length === 0) return;
+    setIsProcessing(true);
+    let successCount = 0;
+    for (const id of selectedListingIds) {
+      const res = await adminUpdateListingFlags(id, { [flag]: value });
+      if (res.success) successCount++;
+    }
+    setIsProcessing(false);
+    await logAdminAction(
+      'BULK_FLAG_UPDATE',
+      `${selectedListingIds.length} ilanın ${flag} özelliği ${value ? 'aktif' : 'pasif'} yapıldı.`,
+      operatorName,
+      'listing'
+    );
+    showToast(`${successCount} ilan toplu olarak güncellendi.`, 'success');
+    setSelectedListingIds([]);
+  };
+
+  const handleBulkChangeStatus = async (status: 'active' | 'passive' | 'sold') => {
+    if (selectedListingIds.length === 0) return;
+    setIsProcessing(true);
+    let successCount = 0;
+    for (const id of selectedListingIds) {
+      const res = await adminUpdateListingFlags(id, { status });
+      if (res.success) successCount++;
+    }
+    setIsProcessing(false);
+    await logAdminAction(
+      'BULK_STATUS_UPDATE',
+      `${selectedListingIds.length} ilanın durumu "${status}" yapıldı.`,
+      operatorName,
+      'listing'
+    );
+    showToast(`${successCount} ilanın durumu "${status}" yapıldı.`, 'success');
+    setSelectedListingIds([]);
+  };
+
+  const handleBulkDeleteListings = async () => {
+    if (selectedListingIds.length === 0) return;
+    if (!window.confirm(`Seçili ${selectedListingIds.length} adet ilanı kalıcı olarak silmek istediğinize emin misiniz?`)) {
+      return;
+    }
+    setIsProcessing(true);
+    let successCount = 0;
+    for (const id of selectedListingIds) {
+      const target = listings.find((l) => l.id === id);
+      try {
+        await deleteListingFromFirestore(id, target?.images || []);
+        successCount++;
+      } catch (err) {
+        console.warn('Silme hatası:', err);
+      }
+    }
+    setIsProcessing(false);
+    await logAdminAction(
+      'BULK_DELETE',
+      `${successCount} adet ilan veritabanından kalıcı olarak silindi.`,
+      operatorName,
+      'listing'
+    );
+    showToast(`${successCount} ilan başarıyla silindi.`, 'success');
+    setSelectedListingIds([]);
+  };
+
+  // CSV EXPORT HANDLERS
+  const handleExportListingsCSV = () => {
+    const headers = [
+      'İlan ID',
+      'İlan No',
+      'Başlık',
+      'Kategori',
+      'Alt Kategori',
+      'Marka',
+      'Model',
+      'Yıl',
+      'Çalışma Saati',
+      'Fiyat',
+      'Para Birimi',
+      'İl',
+      'İlçe',
+      'Durum',
+      'Vitrin',
+      'Makinam Güvende',
+      'Acil',
+      'Satıcı Adı',
+      'Satıcı Tipi',
+      'Satıcı Telefonu'
+    ];
+
+    const rows = filteredListings.map((l) => [
+      l.id,
+      l.adNo || l.id,
+      l.title,
+      l.category,
+      l.subCategory,
+      l.brand,
+      l.model,
+      l.year,
+      l.hours,
+      l.price,
+      l.currency,
+      l.city,
+      l.district,
+      l.status || 'active',
+      l.isVitrin ? 'Evet' : 'Hayır',
+      l.isGuvende ? 'Evet' : 'Hayır',
+      l.isUrgent ? 'Evet' : 'Hayır',
+      l.seller?.companyName || l.seller?.name || '',
+      l.seller?.type || '',
+      l.seller?.phone || ''
+    ]);
+
+    exportToCSV('makinam_ilan_raporu', headers, rows);
+    showToast(`${filteredListings.length} ilan CSV olarak dışa aktarıldı.`, 'success');
+  };
+
+  const handleExportApplicationsCSV = () => {
+    const headers = [
+      'Başvuru No',
+      'Mağaza Adı',
+      'Resmi Ticari Unvan',
+      'Vergi Dairesi',
+      'VKN / TCKN',
+      'Yetkili Adı',
+      'Telefon',
+      'E-posta',
+      'İl',
+      'İlçe',
+      'Durum',
+      'Temsilci Notu'
+    ];
+
+    const rows = filteredApplications.map((app) => [
+      app.applicationNo,
+      app.companyName,
+      app.legalTitle,
+      app.taxOffice,
+      app.taxNumber,
+      app.contactName,
+      app.phone,
+      app.email,
+      app.city,
+      app.district,
+      app.status === 'approved' ? 'Onaylandı' : app.status === 'rejected' ? 'Reddedildi' : 'İnceleniyor',
+      app.reviewNotes || ''
+    ]);
+
+    exportToCSV('kurumsal_magaza_basvurulari', headers, rows);
+    showToast(`${filteredApplications.length} başvuru CSV olarak dışa aktarıldı.`, 'success');
+  };
+
+  const handleExportUsersCSV = () => {
+    const headers = [
+      'Kullanıcı UID',
+      'Ad Soyad',
+      'E-posta',
+      'Telefon',
+      'Hesap Türü',
+      'Yetki Rolü',
+      'Firma Adı',
+      'Vergi No',
+      'İl',
+      'İlçe',
+      'IBAN'
+    ];
+
+    const rows = filteredUsers.map((u) => [
+      u.uid,
+      u.displayName || '',
+      u.email,
+      u.phoneNumber || '',
+      u.accountType || 'bireysel',
+      u.role || 'user',
+      u.companyName || '',
+      u.taxNumber || '',
+      u.city || '',
+      u.district || '',
+      u.iban || ''
+    ]);
+
+    exportToCSV('makinam_kullanicilar', headers, rows);
+    showToast(`${filteredUsers.length} kullanıcı CSV olarak dışa aktarıldı.`, 'success');
+  };
+
+  // CATEGORY CMS HANDLERS
+  const handleSaveNewCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) {
+      showToast('Kategori adı zorunludur.', 'error');
+      return;
+    }
+    const slug = newCatSlug.trim() || newCatName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    setIsProcessing(true);
+    try {
+      await saveCategoryToFirestore({
+        id: slug,
+        name: newCatName.trim(),
+        slug,
+        iconName: newCatIcon || 'Layers',
+        count: 0,
+        subcategories: [],
+        order: categoriesList.length + 1
+      });
+      await logAdminAction(
+        'CATEGORY_CREATE',
+        `Yeni kategori eklendi: "${newCatName.trim()}"`,
+        operatorName,
+        'category',
+        slug
+      );
+      showToast(`"${newCatName}" kategorisi başarıyla eklendi.`, 'success');
+      setNewCatModalOpen(false);
+      setNewCatName('');
+      setNewCatSlug('');
+    } catch (err: any) {
+      showToast(`Kategori eklenemedi: ${err.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAddSubcategory = async (category: Category) => {
+    if (!newSubCatName.trim()) {
+      showToast('Alt kategori adı zorunludur.', 'error');
+      return;
+    }
+    const subSlug = newSubCatName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const updatedSubcategories = [
+      ...(category.subcategories || []),
+      {
+        id: subSlug,
+        slug: subSlug,
+        name: newSubCatName.trim(),
+        count: 0
+      }
+    ];
+
+    setIsProcessing(true);
+    try {
+      await saveCategoryToFirestore({
+        ...category,
+        subcategories: updatedSubcategories
+      });
+      await logAdminAction(
+        'SUBCATEGORY_CREATE',
+        `"${category.name}" kategorisine alt kategori eklendi: "${newSubCatName.trim()}"`,
+        operatorName,
+        'category',
+        category.id
+      );
+      showToast(`"${newSubCatName}" alt kategorisi eklendi.`, 'success');
+      setNewSubCatName('');
+      setSelectedCatForSub(null);
+    } catch (err: any) {
+      showToast(`Alt kategori eklenemedi: ${err.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    if (!window.confirm(`"${category.name}" kategorisini ve tüm alt kategorilerini silmek istediğinize emin misiniz?`)) {
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      await deleteCategoryFromFirestore(category.id);
+      await logAdminAction(
+        'CATEGORY_DELETE',
+        `Kategori silindi: "${category.name}"`,
+        operatorName,
+        'category',
+        category.id
+      );
+      showToast(`"${category.name}" kategorisi silindi.`, 'success');
+    } catch (err: any) {
+      showToast(`Kategori silinemedi: ${err.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -679,6 +1036,29 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                 </div>
                 <span className="text-[10px] text-slate-400 font-mono">
                   {usersList.length}
+                </span>
+              </button>
+            )}
+
+            {canViewSettings && (
+              <button
+                onClick={() => {
+                  setActiveTab('categories');
+                  setEditingListing(null);
+                  setEditingUser(null);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded text-[12px] font-medium transition-colors ${
+                  activeTab === 'categories'
+                    ? 'bg-[#0f172a] text-white'
+                    : 'text-[#475569] hover:bg-[#f1f5f9] hover:text-[#0f172a]'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <FolderTree size={15} />
+                  <span>Kategori Yönetimi</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {categoriesList.length}
                 </span>
               </button>
             )}
@@ -2066,6 +2446,48 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                       )}
                     </div>
                   </div>
+
+                  {/* AUDIT LOG: RECENT OPERATIONAL ACTIONS */}
+                  <div className="bg-white border border-[#cbd5e1] rounded-[4px] p-3.5 shadow-xs">
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#e2e8f0]">
+                      <h2 className="text-[13px] font-bold text-[#0f172a] flex items-center gap-1.5">
+                        <Activity size={15} className="text-[#ea580c]" />
+                        <span>Son Temsilci & Moderasyon İşlem Günlüğü</span>
+                      </h2>
+                      <span className="text-[10px] text-[#64748b] bg-slate-100 px-2 py-0.5 rounded font-mono">
+                        Canlı Takip ({auditLogs.length})
+                      </span>
+                    </div>
+
+                    {auditLogs.length > 0 ? (
+                      <div className="divide-y divide-[#f1f5f9]">
+                        {auditLogs.map((log) => (
+                          <div key={log.id} className="py-2 flex items-center justify-between text-[11.5px]">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0 ${
+                                log.action.includes('DELETE') ? 'bg-red-100 text-red-700' :
+                                log.action.includes('CREATE') || log.action.includes('APPROVE') ? 'bg-emerald-100 text-emerald-800' :
+                                'bg-blue-100 text-blue-800'
+                              }`}>
+                                {log.action.replace(/_/g, ' ')}
+                              </span>
+                              <span className="text-[#1e293b] font-medium truncate">
+                                {log.description}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0 ml-3 text-[10.5px] text-[#64748b]">
+                              <span className="font-semibold text-slate-700">{log.performedBy}</span>
+                              <span>{log.createdAtIso ? new Date(log.createdAtIso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center text-[#94a3b8] text-[11px]">
+                        Henüz kayıtlı operasyon günlüğü bulunmuyor.
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -2082,7 +2504,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-1.5 bg-white p-1 rounded border border-[#cbd5e1] text-[11px] font-semibold">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={handleExportApplicationsCSV}
+                        className="px-3 py-1.5 bg-white border border-[#cbd5e1] hover:bg-slate-50 text-slate-700 rounded text-[11px] font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
+                        title="Tüm başvuruları CSV formatında indir"
+                      >
+                        <Download size={13} className="text-[#0284c7]" />
+                        <span>CSV / Excel</span>
+                      </button>
+
+                      <div className="flex items-center gap-1.5 bg-white p-1 rounded border border-[#cbd5e1] text-[11px] font-semibold">
                       {(['all', 'pending', 'approved', 'rejected'] as const).map((filterKey) => (
                         <button
                           key={filterKey}
@@ -2104,6 +2536,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                       ))}
                     </div>
                   </div>
+                </div>
 
                   {/* SEARCH */}
                   <div className="bg-white p-2.5 rounded-[3px] border border-[#cbd5e1] flex items-center gap-2 shadow-xs">
@@ -2228,7 +2661,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-1.5 bg-white p-1 rounded border border-[#cbd5e1] text-[11px] font-semibold">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={handleExportListingsCSV}
+                        className="px-3 py-1.5 bg-white border border-[#cbd5e1] hover:bg-slate-50 text-slate-700 rounded text-[11px] font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
+                        title="Tüm ilanları CSV formatında indir"
+                      >
+                        <Download size={13} className="text-[#0284c7]" />
+                        <span>CSV / Excel</span>
+                      </button>
+
+                      <div className="flex items-center gap-1.5 bg-white p-1 rounded border border-[#cbd5e1] text-[11px] font-semibold">
                       {(['all', 'active', 'passive', 'sold'] as const).map((statusKey) => (
                         <button
                           key={statusKey}
@@ -2250,9 +2693,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  {/* SEARCH */}
-                  <div className="bg-white p-2.5 rounded-[3px] border border-[#cbd5e1] flex items-center gap-2 shadow-xs">
+                {/* SEARCH & QUICK FILTERS */}
+                <div className="bg-white p-2.5 rounded-[3px] border border-[#cbd5e1] flex flex-wrap items-center gap-2 shadow-xs">
+                  <div className="flex-1 min-w-[220px] flex items-center gap-2">
                     <Search size={15} className="text-[#94a3b8]" />
                     <input
                       type="text"
@@ -2268,28 +2713,141 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                     )}
                   </div>
 
-                  {/* TABLE */}
-                  <div className="bg-white border border-[#cbd5e1] rounded-[4px] shadow-xs overflow-hidden">
-                    {filteredListings.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[11.5px] border-collapse">
-                          <thead>
-                            <tr className="bg-[#f8fafc] text-[#64748b] border-b border-[#cbd5e1] font-bold">
-                              <th className="py-2.5 px-3">Görsel / İlan No</th>
-                              <th className="py-2.5 px-3">İlan Başlığı & Detay</th>
-                              <th className="py-2.5 px-3">Fiyat</th>
-                              <th className="py-2.5 px-3">Satıcı</th>
-                              <th className="py-2.5 px-3">Rozetler</th>
-                              <th className="py-2.5 px-3">Durum</th>
-                              <th className="py-2.5 px-3 text-right">İşlemler</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#f1f5f9]">
-                            {filteredListings.map((item) => {
-                              const thumb = item.images?.[0] || DEFAULT_MACHINE_IMAGE;
-                              const status = item.status || 'active';
-                              return (
-                                <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors">
+                  {/* Category Filter */}
+                  <select
+                    value={listingCategoryFilter}
+                    onChange={(e) => setListingCategoryFilter(e.target.value)}
+                    className="h-[32px] px-2 bg-slate-50 border border-[#cbd5e1] rounded text-[11px] font-semibold text-[#475569]"
+                  >
+                    <option value="all">Tüm Kategoriler</option>
+                    {categoriesList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Flag Filter */}
+                  <select
+                    value={listingFlagFilter}
+                    onChange={(e) => setListingFlagFilter(e.target.value)}
+                    className="h-[32px] px-2 bg-slate-50 border border-[#cbd5e1] rounded text-[11px] font-semibold text-[#475569]"
+                  >
+                    <option value="all">Tüm Rozetler</option>
+                    <option value="vitrin">Vitrin İlanları</option>
+                    <option value="guvende">Makinam Güvende</option>
+                    <option value="urgent">Acil İlanlar</option>
+                  </select>
+
+                  {(listingCategoryFilter !== 'all' || listingFlagFilter !== 'all' || listingSearch) && (
+                    <button
+                      onClick={() => {
+                        setListingSearch('');
+                        setListingCategoryFilter('all');
+                        setListingFlagFilter('all');
+                      }}
+                      className="text-[11px] text-[#ea580c] font-bold hover:underline px-1"
+                    >
+                      Filtreleri Sıfırla
+                    </button>
+                  )}
+                </div>
+
+                {/* BULK ACTIONS TOOLBAR */}
+                {selectedListingIds.length > 0 && (
+                  <div className="bg-[#0f172a] text-white p-2.5 rounded-[4px] flex flex-wrap items-center justify-between gap-2 shadow-md animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2 text-[12px] font-bold">
+                      <CheckCheck size={16} className="text-[#38bdf8]" />
+                      <span>{selectedListingIds.length} ilan seçildi</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <button
+                        onClick={() => handleBulkToggleFlag('isVitrin', true)}
+                        className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded flex items-center gap-1 transition-colors"
+                      >
+                        <Star size={12} /> Vitrin Yap
+                      </button>
+                      <button
+                        onClick={() => handleBulkToggleFlag('isGuvende', true)}
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded flex items-center gap-1 transition-colors"
+                      >
+                        <ShieldCheck size={12} /> Güvende Yap
+                      </button>
+                      <button
+                        onClick={() => handleBulkChangeStatus('active')}
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+                      >
+                        Aktif
+                      </button>
+                      <button
+                        onClick={() => handleBulkChangeStatus('passive')}
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+                      >
+                        Pasif
+                      </button>
+                      <button
+                        onClick={() => handleBulkChangeStatus('sold')}
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+                      >
+                        Satıldı
+                      </button>
+                      <button
+                        onClick={handleBulkDeleteListings}
+                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded flex items-center gap-1 transition-colors"
+                      >
+                        <Trash2 size={12} /> Sil
+                      </button>
+                      <button
+                        onClick={() => setSelectedListingIds([])}
+                        className="px-2 py-1 text-slate-400 hover:text-white transition-colors"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TABLE */}
+                <div className="bg-white border border-[#cbd5e1] rounded-[4px] shadow-xs overflow-hidden">
+                  {filteredListings.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[11.5px] border-collapse">
+                        <thead>
+                          <tr className="bg-[#f8fafc] text-[#64748b] border-b border-[#cbd5e1] font-bold">
+                            <th className="py-2.5 px-3 w-8">
+                              <input
+                                type="checkbox"
+                                checked={selectedListingIds.length > 0 && selectedListingIds.length === filteredListings.length}
+                                onChange={handleSelectAllListings}
+                                className="rounded cursor-pointer"
+                                title="Tümünü Seç / Kaldır"
+                              />
+                            </th>
+                            <th className="py-2.5 px-3">Görsel / İlan No</th>
+                            <th className="py-2.5 px-3">İlan Başlığı & Detay</th>
+                            <th className="py-2.5 px-3">Fiyat</th>
+                            <th className="py-2.5 px-3">Satıcı</th>
+                            <th className="py-2.5 px-3">Rozetler</th>
+                            <th className="py-2.5 px-3">Durum</th>
+                            <th className="py-2.5 px-3 text-right">İşlemler</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#f1f5f9]">
+                          {filteredListings.map((item) => {
+                            const thumb = item.images?.[0] || DEFAULT_MACHINE_IMAGE;
+                            const status = item.status || 'active';
+                            const isSelected = selectedListingIds.includes(item.id);
+                            return (
+                              <tr key={item.id} className={`hover:bg-[#f8fafc] transition-colors ${isSelected ? 'bg-sky-50/60' : ''}`}>
+                                <td className="py-2.5 px-3 w-8" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleSelectListing(item.id)}
+                                    className="rounded cursor-pointer"
+                                  />
+                                </td>
                                   <td className="py-2.5 px-3">
                                     <div className="flex items-center gap-2">
                                       <img
@@ -2450,6 +3008,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleExportUsersCSV}
+                        className="px-3 py-1.5 bg-white border border-[#cbd5e1] hover:bg-slate-50 text-slate-700 rounded text-[11px] font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
+                        title="Tüm kullanıcıları CSV formatında indir"
+                      >
+                        <Download size={13} className="text-[#0284c7]" />
+                        <span>CSV / Excel</span>
+                      </button>
+
                       <button
                         onClick={fetchUsers}
                         disabled={isLoadingUsers}
@@ -2650,6 +3217,207 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* ========================================================
+                  TAB: CATEGORY CMS (KATEGORİ VE ALT KATEGORİ YÖNETİMİ)
+              ======================================================== */}
+              {activeTab === 'categories' && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h1 className="text-[18px] font-black text-[#0f172a]">Kategori & Sektör Yönetimi</h1>
+                      <p className="text-[12px] text-[#64748b]">
+                        Pazaryerinde listelenen ana makine kategorilerini ve alt dallarını canlı yönetin.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setNewCatName('');
+                        setNewCatSlug('');
+                        setNewCatIcon('Layers');
+                        setNewCatModalOpen(true);
+                      }}
+                      className="px-3.5 py-1.5 bg-[#ea580c] hover:bg-[#c2410c] text-white text-[12px] font-bold rounded flex items-center gap-1.5 shadow-xs transition-colors"
+                    >
+                      <Plus size={15} />
+                      <span>Yeni Kategori Ekle</span>
+                    </button>
+                  </div>
+
+                  {/* CATEGORIES GRID */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {categoriesList.map((cat) => (
+                      <div
+                        key={cat.id}
+                        className="bg-white border border-[#cbd5e1] rounded-[4px] p-3.5 shadow-xs flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between pb-2 border-b border-[#f1f5f9]">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded bg-orange-50 text-[#ea580c] flex items-center justify-center font-bold text-[12px] border border-orange-200">
+                                <FolderTree size={15} />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-[13px] text-[#0f172a]">{cat.name}</h3>
+                                <span className="font-mono text-[10px] text-[#64748b]">/{cat.slug}</span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleDeleteCategory(cat)}
+                              className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                              title="Kategoriyi Sil"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          {/* Subcategories list */}
+                          <div className="mt-3">
+                            <div className="text-[11px] font-bold text-[#64748b] mb-1.5 flex items-center justify-between">
+                              <span>Alt Kategoriler ({cat.subcategories?.length || 0})</span>
+                              <button
+                                onClick={() => {
+                                  setSelectedCatForSub(cat);
+                                  setNewSubCatName('');
+                                }}
+                                className="text-[#0284c7] hover:underline font-bold text-[10.5px] flex items-center gap-1"
+                              >
+                                <Plus size={11} /> Alt Kategori Ekle
+                              </button>
+                            </div>
+
+                            {/* Subcategories pill chips */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {cat.subcategories && cat.subcategories.length > 0 ? (
+                                cat.subcategories.map((sub) => (
+                                  <span
+                                    key={sub.id}
+                                    className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-700 font-medium"
+                                  >
+                                    <span>{sub.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        const updated = cat.subcategories.filter((s) => s.id !== sub.id);
+                                        await saveCategoryToFirestore({ ...cat, subcategories: updated });
+                                        showToast(`"${sub.name}" alt kategorisi silindi.`, 'success');
+                                      }}
+                                      className="text-slate-400 hover:text-red-600 font-bold"
+                                      title="Alt kategoriyi sil"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[11px] text-slate-400 italic">Henüz alt kategori eklenmemiş.</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Inline subcategory creation drawer if selected */}
+                        {selectedCatForSub?.id === cat.id && (
+                          <div className="mt-3 pt-2.5 border-t border-[#f1f5f9] flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={newSubCatName}
+                              onChange={(e) => setNewSubCatName(e.target.value)}
+                              placeholder="Alt kategori adı (Örn: Paletli Ekskavatör)"
+                              className="flex-1 h-[30px] px-2 text-[11px] border border-[#cbd5e1] rounded focus:outline-none focus:border-[#ea580c]"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddSubcategory(cat)}
+                              className="px-3 h-[30px] bg-[#0f172a] hover:bg-slate-800 text-white text-[11px] font-bold rounded"
+                            >
+                              Ekle
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCatForSub(null)}
+                              className="px-2 h-[30px] text-slate-500 hover:text-slate-800 text-[11px]"
+                            >
+                              İptal
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* MODAL: CREATE NEW CATEGORY */}
+                  {newCatModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                      <div className="bg-white rounded-[4px] max-w-md w-full p-5 space-y-4 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                          <h3 className="font-bold text-[14px] text-slate-900 flex items-center gap-1.5">
+                            <FolderTree size={16} className="text-[#ea580c]" />
+                            <span>Yeni Ana Makine Kategorisi Ekle</span>
+                          </h3>
+                          <button onClick={() => setNewCatModalOpen(false)} className="text-slate-400 hover:text-slate-700">
+                            <X size={16} />
+                          </button>
+                        </div>
+
+                        <form onSubmit={handleSaveNewCategory} className="space-y-3">
+                          <div>
+                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">
+                              Kategori Adı *
+                            </label>
+                            <input
+                              type="text"
+                              value={newCatName}
+                              onChange={(e) => {
+                                setNewCatName(e.target.value);
+                                if (!newCatSlug) {
+                                  setNewCatSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+                                }
+                              }}
+                              placeholder="Örn: Forklift & İstif Makineleri"
+                              className="w-full h-[32px] px-2.5 text-[12px] border border-slate-300 rounded focus:outline-none focus:border-[#ea580c]"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">
+                              URL Kısaltması (Slug)
+                            </label>
+                            <input
+                              type="text"
+                              value={newCatSlug}
+                              onChange={(e) => setNewCatSlug(e.target.value)}
+                              placeholder="forklift-ve-istif"
+                              className="w-full h-[32px] px-2.5 text-[12px] font-mono border border-slate-300 rounded focus:outline-none focus:border-[#ea580c]"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => setNewCatModalOpen(false)}
+                              className="px-3.5 py-1.5 border border-slate-300 text-slate-700 rounded text-[11.5px] font-semibold hover:bg-slate-50"
+                            >
+                              İptal
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={isProcessing}
+                              className="px-4 py-1.5 bg-[#ea580c] hover:bg-[#c2410c] text-white rounded text-[11.5px] font-bold shadow-xs"
+                            >
+                              {isProcessing ? 'Ekleniyor...' : 'Kategoriyi Oluştur'}
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
