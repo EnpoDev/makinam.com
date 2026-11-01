@@ -52,6 +52,7 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
   // Edit Listing State
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [editErrorMessage, setEditErrorMessage] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     title: '',
     price: 0,
@@ -83,6 +84,7 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
     e.preventDefault();
     if (!editingListing) return;
     setIsSaving(true);
+    setEditErrorMessage(null);
     try {
       if (onUpdateListing) {
         await onUpdateListing(editingListing.id, editFormData);
@@ -90,16 +92,16 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
       setStatusMessage(`"${editFormData.title}" ilanı başarıyla güncellendi.`);
       setEditingListing(null);
       setTimeout(() => setStatusMessage(null), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('İlan güncellenirken hata oluştu:', error);
-      alert('İlan güncellenirken bir hata oluştu.');
+      setEditErrorMessage('İlan güncellenirken bir hata oluştu: ' + (error?.message || 'Lütfen tekrar deneyiniz.'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const displayName = userProfile?.displayName || user?.displayName || user?.email?.split('@')[0] || '';
-  const email = user?.email || userProfile?.email || 'enespoyraz380@gmail.com';
+  const email = user?.email || userProfile?.email || '';
   const accountType = userProfile?.accountType || 'bireysel';
 
   // Filter listings belonging to the user
@@ -108,12 +110,12 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
     if (user?.uid && l.userId === user.uid) return true;
     // 2. Direct match by User Email
     if (user?.email && l.userId === user.email) return true;
-    // 3. Match by logged-in Seller Name
-    if (displayName && l.seller?.name && l.seller.name.toLowerCase().includes(displayName.toLowerCase())) return true;
-    // 4. Match by User Phone Number
+    // 3. Match by User Phone Number
     if (userProfile?.phoneNumber && l.seller?.phone && l.seller.phone === userProfile.phoneNumber) return true;
-    // 5. Match by Enes Poyraz
-    if (email.includes('enespoyraz') || displayName.toLowerCase().includes('enes')) {
+    // 4. Match by logged-in Seller Name
+    if (displayName && l.seller?.name && l.seller.name.toLowerCase() === displayName.toLowerCase()) return true;
+    // 5. Special fallback ONLY for Super Admin account
+    if (user?.email === 'enespoyraz380@gmail.com') {
       if (l.seller?.name?.toLowerCase().includes('enes') || l.userId?.includes('enes')) return true;
     }
     return false;
@@ -158,6 +160,36 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
   const formatPrice = (price: number, currency: string) => {
     return `${price.toLocaleString('tr-TR')} ${currency === 'TL' ? 'TL' : currency}`;
   };
+
+  if (!user && !authLoading) {
+    return (
+      <div className="max-w-[1240px] mx-auto px-3 py-16 font-sans text-center">
+        <div className="max-w-md mx-auto bg-white border border-[#e2e8f0] p-8 rounded-[4px] shadow-2xs">
+          <div className="w-14 h-14 bg-orange-50 text-[#ea580c] rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-200">
+            <Settings size={26} className="text-[#ea580c]" />
+          </div>
+          <h2 className="text-[18px] font-black text-[#1e293b]">İlanlarınızı Yönetmek İçin Giriş Yapın</h2>
+          <p className="text-[12.5px] text-[#64748b] mt-1.5 mb-6 leading-relaxed">
+            Makinam.com'da yayınladığınız ilanlarınızı görüntülemek, fiyat ve açıklamalarını güncellemek veya yayından kaldırmak için lütfen üye girişi yapınız.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/giris-yap?redirect=/hesabim/ilanlarim"
+              className="w-full sm:w-auto px-6 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white text-[12.5px] font-bold rounded-[3px] transition-colors shadow-xs"
+            >
+              Giriş Yap / Üye Ol
+            </Link>
+            <Link
+              to="/"
+              className="w-full sm:w-auto px-5 py-2.5 border border-[#cbd5e1] hover:bg-slate-50 text-[#475569] text-[12.5px] font-bold rounded-[3px] transition-colors"
+            >
+              Pazaryerine Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1240px] mx-auto px-3 py-5 font-sans">
@@ -528,6 +560,12 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
 
             {/* Modal Body / Form */}
             <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4">
+              {editErrorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded text-[12px] flex items-center gap-2">
+                  <AlertCircle size={16} className="text-red-600 shrink-0" />
+                  <span>{editErrorMessage}</span>
+                </div>
+              )}
               {/* Title */}
               <div>
                 <label className="block text-[12px] font-bold text-slate-700 mb-1">

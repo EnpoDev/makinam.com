@@ -80,10 +80,11 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
   // Contact & Location
   const [city, setCity] = useState<string>('İstanbul');
   const [district, setDistrict] = useState<string>('İkitelli OSB');
-  const [sellerName, setSellerName] = useState<string>('Enes Poyraz');
-  const [phone, setPhone] = useState<string>('0532 000 00 00');
+  const [sellerName, setSellerName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
   const [sellerType, setSellerType] = useState<'Sahibinden' | 'Galeriden' | 'Yetkili Bayi' | 'Üreticiden'>('Sahibinden');
   const [showPhone, setShowPhone] = useState<boolean>(true);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Generated listing ID after publish
   const [publishedListingId, setPublishedListingId] = useState<string>('');
@@ -115,10 +116,10 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
   // Sync user profile data on load
   useEffect(() => {
     if (userProfile || user) {
-      setSellerName(userProfile?.companyName || userProfile?.displayName || user?.displayName || 'Enes Poyraz');
-      setPhone(userProfile?.phoneNumber || '0532 000 00 00');
-      setCity(userProfile?.city || 'İstanbul');
-      setDistrict(userProfile?.district || 'İkitelli OSB');
+      setSellerName(userProfile?.companyName || userProfile?.displayName || user?.displayName || '');
+      setPhone(userProfile?.phoneNumber || '');
+      if (userProfile?.city) setCity(userProfile.city);
+      if (userProfile?.district) setDistrict(userProfile.district);
       setSellerType(userProfile?.accountType === 'kurumsal' ? 'Galeriden' : 'Sahibinden');
     }
   }, [user, userProfile]);
@@ -196,14 +197,21 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
 
   // Submit Listing
   const handlePublishListing = async () => {
-    if (!title || !selectedCategory || !selectedSubCategory || !price) {
-      alert('Lütfen zorunlu alanları doldurunuz.');
+    setFormError(null);
+
+    if (!title.trim() || !selectedCategory || !selectedSubCategory || !price) {
+      setFormError('Lütfen zorunlu alanları (Kategori, Başlık ve Fiyat) doldurunuz.');
+      return;
+    }
+
+    if (!sellerName.trim() || !phone.trim()) {
+      setFormError('Lütfen satıcı adı/firma ve iletişim telefonu alanlarını doldurunuz.');
       return;
     }
 
     setIsSubmitting(true);
 
-    const generatedId = `mak-${Date.now().toString().slice(-4)}`;
+    const generatedId = `mak-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
     const randomAdNo = `1098${Math.floor(Math.random() * 900000 + 100000)}`;
 
     const finalImages =
@@ -263,7 +271,7 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
       setStep(5); // Go to celebration screen
     } catch (err) {
       console.error('İlan yayınlanırken hata:', err);
-      alert('İlan kaydedilirken bir hata oluştu.');
+      setFormError('İlan veritabanına kaydedilirken bir hata oluştu. Lütfen tekrar deneyiniz.');
     } finally {
       setIsSubmitting(false);
     }
@@ -853,7 +861,7 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
                       type="button"
                       onClick={() => {
                         if (images.length >= 15) {
-                          alert('En fazla 15 fotoğraf ekleyebilirsiniz.');
+                          setFormError('En fazla 15 fotoğraf ekleyebilirsiniz.');
                           return;
                         }
                         if (isSelected) {
@@ -987,6 +995,34 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
                 Alıcıların size kolayca ulaşabilmesi için bilgileri kontrol edip onaylayınız.
               </p>
             </div>
+
+            {formError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-[3px] text-[12px] flex items-center gap-2">
+                <AlertCircle size={16} className="text-red-600 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            {!user && (
+              <div className="mb-4 p-3.5 bg-amber-50 border border-amber-300 rounded-[4px] text-[12px] text-amber-900 flex items-start gap-3">
+                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-bold text-[12.5px] text-amber-950">Giriş Yapmadınız</div>
+                  <p className="mt-0.5 text-amber-800">
+                    İlanınızın doğrudan hesabınıza kaydedilmesi ve dilediğiniz zaman "İlanlarım" panelinden güncelleyip silebilmeniz için üye girişi yapmanız önerilir.
+                  </p>
+                  <div className="mt-2">
+                    <Link
+                      to="/giris-yap?redirect=/ilan-ver"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#19324d] hover:bg-[#122438] text-white text-[11.5px] font-bold rounded-[3px] transition-colors"
+                    >
+                      <span>Şimdi Giriş Yap / Üye Ol</span>
+                      <ChevronRight size={13} />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Left Column: Location & Contact */}

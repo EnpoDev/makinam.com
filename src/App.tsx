@@ -1,21 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
-import { ListingPage } from './pages/ListingPage';
-import { DetailPage } from './pages/DetailPage';
-import { LoginPage } from './pages/LoginPage';
-import { MyListingsPage } from './pages/MyListingsPage';
-import { FavoritesPage } from './pages/FavoritesPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { MessagesPage } from './pages/MessagesPage';
-import { PostAdPage } from './pages/PostAdPage';
-import { HelpPage } from './pages/HelpPage';
-import { MakinamGuvendePage } from './pages/MakinamGuvendePage';
-import { CorporateStoreApplicationPage } from './pages/CorporateStoreApplicationPage';
-import { LegalAgreementsPage } from './pages/LegalAgreementsPage';
-import { AdminPage } from './pages/AdminPage';
 import { AuthProvider } from './context/AuthContext';
 import { FavoritesProvider, useFavorites } from './context/FavoritesContext';
 import { CategoryProvider } from './context/CategoryContext';
@@ -29,6 +16,28 @@ import {
   updateListingStatusInFirestore,
   updateListingInFirestore
 } from './lib/firebase';
+
+// Lazy-loaded routes for code-splitting and rapid initial bundle loading
+const ListingPage = lazy(() => import('./pages/ListingPage').then(m => ({ default: m.ListingPage })));
+const DetailPage = lazy(() => import('./pages/DetailPage').then(m => ({ default: m.DetailPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const MyListingsPage = lazy(() => import('./pages/MyListingsPage').then(m => ({ default: m.MyListingsPage })));
+const FavoritesPage = lazy(() => import('./pages/FavoritesPage').then(m => ({ default: m.FavoritesPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const MessagesPage = lazy(() => import('./pages/MessagesPage').then(m => ({ default: m.MessagesPage })));
+const PostAdPage = lazy(() => import('./pages/PostAdPage').then(m => ({ default: m.PostAdPage })));
+const HelpPage = lazy(() => import('./pages/HelpPage').then(m => ({ default: m.HelpPage })));
+const MakinamGuvendePage = lazy(() => import('./pages/MakinamGuvendePage').then(m => ({ default: m.MakinamGuvendePage })));
+const CorporateStoreApplicationPage = lazy(() => import('./pages/CorporateStoreApplicationPage').then(m => ({ default: m.CorporateStoreApplicationPage })));
+const LegalAgreementsPage = lazy(() => import('./pages/LegalAgreementsPage').then(m => ({ default: m.LegalAgreementsPage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+
+const RouteLoadingFallback = () => (
+  <div className="min-h-[50vh] flex flex-col items-center justify-center p-8">
+    <div className="w-8 h-8 border-3 border-[#ea580c] border-t-transparent rounded-full animate-spin mb-3"></div>
+    <div className="text-[12px] font-bold text-[#1e293b]">Yükleniyor...</div>
+  </div>
+);
 
 export const AppContent: React.FC = () => {
   const { cleanOrphanFavorites, removeFavorite } = useFavorites();
@@ -144,9 +153,10 @@ export const AppContent: React.FC = () => {
   };
 
   return (
-    <Routes>
-      {/* 1. STANDALONE LOGIN & REGISTER PAGE */}
-      <Route path="/giris-yap" element={<LoginPage />} />
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Routes>
+        {/* 1. STANDALONE LOGIN & REGISTER PAGE */}
+        <Route path="/giris-yap" element={<LoginPage />} />
       <Route path="/giris" element={<LoginPage />} />
       <Route path="/hesap-ac" element={<LoginPage />} />
 
@@ -310,6 +320,7 @@ export const AppContent: React.FC = () => {
         }
       />
     </Routes>
+    </Suspense>
   );
 };
 

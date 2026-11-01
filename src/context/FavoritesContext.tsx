@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 
 interface FavoritesContextType {
   favorites: string[];
@@ -27,6 +30,38 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return [];
   });
 
+  const currentUserIdRef = useRef<string | null>(null);
+
+  // Sync with Firestore when user logs in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      currentUserIdRef.current = currentUser ? currentUser.uid : null;
+      if (currentUser) {
+        try {
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const snap = await getDoc(userDocRef);
+          if (snap.exists()) {
+            const data = snap.data();
+            const cloudFavs = Array.isArray(data.favorites) ? data.favorites : [];
+            setFavorites((prev) => {
+              const combined = Array.from(new Set([...prev, ...cloudFavs]));
+              // If new favorites were found in localStorage not yet in cloud, sync up
+              if (combined.length !== cloudFavs.length) {
+                updateDoc(userDocRef, { favorites: combined }).catch(() => {});
+              }
+              return combined;
+            });
+          }
+        } catch (err) {
+          console.warn('Firestore favoriler senkronizasyon hatası:', err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Sync to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
@@ -35,13 +70,28 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [favorites]);
 
+  // Helper to persist to Firestore if logged in
+  const syncToCloud = (newFavs: string[]) => {
+    const uid = currentUserIdRef.current;
+    if (uid) {
+      try {
+        const userDocRef = doc(db, 'users', uid);
+        updateDoc(userDocRef, { favorites: newFavs }).catch((err) => {
+          console.warn('Firestore favori güncelleme hatası:', err);
+        });
+      } catch (err) {
+        console.warn('Firestore favori güncelleme hatası:', err);
+      }
+    }
+  };
+
   const toggleFavorite = (listingId: string) => {
     setFavorites((prev) => {
-      if (prev.includes(listingId)) {
-        return prev.filter((id) => id !== listingId);
-      } else {
-        return [...prev, listingId];
-      }
+      const next = prev.includes(listingId)
+        ? prev.filter((id) => id !== listingId)
+        : [...prev, listingId];
+      syncToCloud(next);
+      return next;
     });
   };
 
@@ -50,11 +100,16 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const removeFavorite = (listingId: string) => {
-    setFavorites((prev) => prev.filter((id) => id !== listingId));
+    setFavorites((prev) => {
+      const next = prev.filter((id) => id !== listingId);
+      syncToCloud(next);
+      return next;
+    });
   };
 
   const clearFavorites = () => {
     setFavorites([]);
+    syncToCloud([]);
   };
 
   const cleanOrphanFavorites = (existingIds: string[]) => {
@@ -63,6 +118,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setFavorites((prev) => {
       const valid = prev.filter((id) => existingSet.has(id));
       if (valid.length !== prev.length) {
+        syncToCloud(valid);
         return valid;
       }
       return prev;

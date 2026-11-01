@@ -10,7 +10,8 @@ import {
   Phone,
   Sparkles,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -50,15 +51,17 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
   );
   const [isSending, setIsSending] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createdConvId, setCreatedConvId] = useState<string>('');
 
   if (!isOpen) return null;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
 
     if (!messageText.trim()) {
-      alert('Lütfen göndermek istediğiniz mesajı yazınız.');
+      setErrorMessage('Lütfen göndermek istediğiniz mesajı yazınız.');
       return;
     }
 
@@ -86,7 +89,7 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
       setIsSuccess(true);
     } catch (err) {
       console.error('Mesaj gönderme hatası:', err);
-      alert('Mesaj gönderilirken bir hata oluştu. Lütfen tekrar deneyiniz.');
+      setErrorMessage('Mesaj gönderilirken bir hata oluştu. Lütfen tekrar deneyiniz.');
     } finally {
       setIsSending(false);
     }
@@ -187,6 +190,12 @@ export const SendMessageModal: React.FC<SendMessageModalProps> = ({
         ) : (
           /* FORM SCREEN */
           <form onSubmit={handleSend} className="p-4 space-y-3.5">
+            {errorMessage && (
+              <div className="p-2.5 bg-red-50 border border-red-200 text-red-800 rounded-[3px] text-[11.5px] flex items-center gap-2">
+                <AlertCircle size={15} className="text-red-600 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
             {/* Mini Listing Card */}
             <div className="p-2.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-[3px] flex items-center gap-2.5">
               <img

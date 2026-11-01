@@ -55,7 +55,7 @@ export function cleanFirestoreDoc<T>(obj: T): T {
 // Helper: Save new listing to Firestore
 export const addListingToFirestore = async (listing: Listing): Promise<string> => {
   try {
-    const listingId = listing.id || `mak-${Date.now().toString().slice(-4)}`;
+    const listingId = listing.id || `mak-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
     const docRef = doc(db, "listings", listingId);
 
     const cleanedData = cleanFirestoreDoc({

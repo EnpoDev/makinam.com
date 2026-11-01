@@ -57,6 +57,7 @@ export const ProfilePage: React.FC = () => {
   // Status states
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedIban, setCopiedIban] = useState(false);
 
   // Initialize from user / userProfile
@@ -100,6 +101,7 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setSuccessMessage(null);
+    setErrorMessage(null);
 
     try {
       await updateUserProfile({
@@ -122,7 +124,7 @@ export const ProfilePage: React.FC = () => {
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       console.error('Kaydetme hatası:', err);
-      alert('Profil veritabanına kaydedilirken bir hata oluştu: ' + (err.message || ''));
+      setErrorMessage('Profil veritabanına kaydedilirken bir hata oluştu: ' + (err.message || ''));
     } finally {
       setLoading(false);
     }
@@ -171,6 +173,14 @@ export const ProfilePage: React.FC = () => {
         <div className="mb-5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-[4px] text-[12.5px] font-medium flex items-center gap-2.5 animate-in fade-in">
           <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
           <span>{successMessage}</span>
+        </div>
+      )}
+
+      {/* Error Alert */}
+      {errorMessage && (
+        <div className="mb-5 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-[4px] text-[12.5px] font-medium flex items-center gap-2.5 animate-in fade-in">
+          <AlertCircle size={18} className="text-red-600 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
