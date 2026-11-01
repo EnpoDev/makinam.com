@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 interface FavoritesContextType {
@@ -47,7 +47,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               const combined = Array.from(new Set([...prev, ...cloudFavs]));
               // If new favorites were found in localStorage not yet in cloud, sync up
               if (combined.length !== cloudFavs.length) {
-                updateDoc(userDocRef, { favorites: combined }).catch(() => {});
+                setDoc(userDocRef, { favorites: combined }, { merge: true }).catch(() => {});
               }
               return combined;
             });
@@ -76,7 +76,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (uid) {
       try {
         const userDocRef = doc(db, 'users', uid);
-        updateDoc(userDocRef, { favorites: newFavs }).catch((err) => {
+        setDoc(userDocRef, { favorites: newFavs }, { merge: true }).catch((err) => {
           console.warn('Firestore favori güncelleme hatası:', err);
         });
       } catch (err) {

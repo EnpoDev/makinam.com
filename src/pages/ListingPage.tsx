@@ -37,18 +37,47 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
   const urgentParam = searchParams.get('urgent') === 'true';
   const guvendeParam = searchParams.get('guvende') === 'true' || searchParams.get('guvende') === '1';
   const sellerParam = searchParams.get('seller') || '';
+  const cityParam = searchParams.get('city') || '';
+  const minPriceParam = searchParams.get('minPrice') || '';
+  const maxPriceParam = searchParams.get('maxPrice') || '';
+  const minYearParam = searchParams.get('minYear') || '';
+  const maxYearParam = searchParams.get('maxYear') || '';
+  const sortParam = searchParams.get('sort') || 'date_desc';
 
-  // Local filter states
-  const [selectedCity, setSelectedCity] = useState<string>('');
-  const [minPrice, setMinPrice] = useState<string>('');
-  const [maxPrice, setMaxPrice] = useState<string>('');
-  const [minYear, setMinYear] = useState<string>('');
-  const [maxYear, setMaxYear] = useState<string>('');
+  // Local filter states initialized from URL params
+  const [selectedCity, setSelectedCity] = useState<string>(cityParam);
+  const [minPrice, setMinPrice] = useState<string>(minPriceParam);
+  const [maxPrice, setMaxPrice] = useState<string>(maxPriceParam);
+  const [minYear, setMinYear] = useState<string>(minYearParam);
+  const [maxYear, setMaxYear] = useState<string>(maxYearParam);
   const [selectedBrand, setSelectedBrand] = useState<string>(brandParam);
   const [sellerType, setSellerType] = useState<string>(sellerParam || 'all');
-  const [sortBy, setSortBy] = useState<string>('date_desc');
+  const [sortBy, setSortBy] = useState<string>(sortParam);
   const [viewMode, setViewMode] = useState<'list' | 'gallery'>('list');
   const { toggleFavorite, isFavorite } = useFavorites();
+
+  // Helper to sync filter values into URL query params (supports deep links & browser navigation)
+  const updateUrlParam = (key: string, value: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (!value || value === 'all' || (key === 'sort' && value === 'date_desc')) {
+      nextParams.delete(key);
+    } else {
+      nextParams.set(key, value);
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  // Sync state if user clicks browser Back / Forward buttons
+  useEffect(() => {
+    setSelectedCity(searchParams.get('city') || '');
+    setMinPrice(searchParams.get('minPrice') || '');
+    setMaxPrice(searchParams.get('maxPrice') || '');
+    setMinYear(searchParams.get('minYear') || '');
+    setMaxYear(searchParams.get('maxYear') || '');
+    setSelectedBrand(searchParams.get('brand') || '');
+    setSellerType(searchParams.get('seller') || 'all');
+    setSortBy(searchParams.get('sort') || 'date_desc');
+  }, [searchParams]);
 
   // Find active category
   const activeCategory = useMemo(() => {
@@ -326,7 +355,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
               <label className="block text-[11px] font-bold text-[#334155] mb-1">İl</label>
               <select
                 value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCity(e.target.value);
+                  updateUrlParam('city', e.target.value);
+                }}
                 className="w-full h-[28px] text-[11px] border border-[#cbd5e1] rounded-[2px] px-2 bg-white focus:outline-none focus:border-[#ea580c]"
               >
                 <option value="">Tüm İller</option>
@@ -343,7 +375,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
               <label className="block text-[11px] font-bold text-[#334155] mb-1">Marka</label>
               <select
                 value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
+                onChange={(e) => {
+                  setSelectedBrand(e.target.value);
+                  updateUrlParam('brand', e.target.value);
+                }}
                 className="w-full h-[28px] text-[11px] border border-[#cbd5e1] rounded-[2px] px-2 bg-white focus:outline-none focus:border-[#ea580c]"
               >
                 <option value="">Tüm Markalar</option>
@@ -366,6 +401,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                   placeholder="Min"
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
+                  onBlur={() => updateUrlParam('minPrice', minPrice)}
                   className="w-1/2 h-[28px] text-[11px] border border-[#cbd5e1] rounded-[2px] px-2 focus:outline-none focus:border-[#ea580c]"
                 />
                 <span className="text-[#94a3b8]">-</span>
@@ -374,6 +410,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                   placeholder="Max"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
+                  onBlur={() => updateUrlParam('maxPrice', maxPrice)}
                   className="w-1/2 h-[28px] text-[11px] border border-[#cbd5e1] rounded-[2px] px-2 focus:outline-none focus:border-[#ea580c]"
                 />
               </div>
@@ -388,6 +425,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                   placeholder="Min"
                   value={minYear}
                   onChange={(e) => setMinYear(e.target.value)}
+                  onBlur={() => updateUrlParam('minYear', minYear)}
                   className="w-1/2 h-[28px] text-[11px] border border-[#cbd5e1] rounded-[2px] px-2 focus:outline-none focus:border-[#ea580c]"
                 />
                 <span className="text-[#94a3b8]">-</span>
@@ -396,6 +434,7 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                   placeholder="Max"
                   value={maxYear}
                   onChange={(e) => setMaxYear(e.target.value)}
+                  onBlur={() => updateUrlParam('maxYear', maxYear)}
                   className="w-1/2 h-[28px] text-[11px] border border-[#cbd5e1] rounded-[2px] px-2 focus:outline-none focus:border-[#ea580c]"
                 />
               </div>
@@ -412,7 +451,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                     type="radio"
                     name="seller"
                     checked={sellerType === 'all'}
-                    onChange={() => setSellerType('all')}
+                    onChange={() => {
+                      setSellerType('all');
+                      updateUrlParam('seller', 'all');
+                    }}
                   />
                   <span>Tümü</span>
                 </label>
@@ -421,7 +463,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                     type="radio"
                     name="seller"
                     checked={sellerType === 'Sahibinden'}
-                    onChange={() => setSellerType('Sahibinden')}
+                    onChange={() => {
+                      setSellerType('Sahibinden');
+                      updateUrlParam('seller', 'Sahibinden');
+                    }}
                   />
                   <span>Sahibinden</span>
                 </label>
@@ -430,7 +475,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                     type="radio"
                     name="seller"
                     checked={sellerType === 'Galeriden'}
-                    onChange={() => setSellerType('Galeriden')}
+                    onChange={() => {
+                      setSellerType('Galeriden');
+                      updateUrlParam('seller', 'Galeriden');
+                    }}
                   />
                   <span>Galeriden / Mağazadan</span>
                 </label>
@@ -439,7 +487,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                     type="radio"
                     name="seller"
                     checked={sellerType === 'Yetkili Bayi'}
-                    onChange={() => setSellerType('Yetkili Bayi')}
+                    onChange={() => {
+                      setSellerType('Yetkili Bayi');
+                      updateUrlParam('seller', 'Yetkili Bayi');
+                    }}
                   />
                   <span>Yetkili Bayi</span>
                 </label>
@@ -478,7 +529,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                 <span className="text-[#64748b] hidden sm:inline">Sıralama:</span>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    updateUrlParam('sort', e.target.value);
+                  }}
                   className="h-[28px] text-[11px] border border-[#cbd5e1] rounded-[2px] px-2 bg-white focus:outline-none focus:border-[#ea580c]"
                 >
                   <option value="date_desc">Tarihe Göre (En Yeni)</option>

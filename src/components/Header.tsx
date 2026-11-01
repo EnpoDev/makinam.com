@@ -394,9 +394,12 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 text-[#cbd5e1] hover:text-white rounded-[3px] hover:bg-[#214266]"
+            className="lg:hidden relative p-2 text-[#cbd5e1] hover:text-white rounded-[3px] hover:bg-[#214266]"
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            {unreadMessagesCount > 0 && !mobileMenuOpen && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-[#19324d]"></span>
+            )}
           </button>
         </div>
       </div>

@@ -115,6 +115,12 @@ export const CorporateStoreApplicationPage: React.FC = () => {
       return;
     }
 
+    const cleanTaxNo = formData.taxNumber.replace(/[^0-9]/g, '');
+    if (cleanTaxNo.length !== 10 && cleanTaxNo.length !== 11) {
+      setErrorMessage('Vergi kimlik numarası (VKN) 10 haneli veya T.C. kimlik numarası (TCKN) 11 haneli rakamlardan oluşmalıdır.');
+      return;
+    }
+
     if (!formData.contactName.trim() || !formData.phone.trim() || !formData.email.trim()) {
       setErrorMessage('Lütfen yetkili adı, telefon ve e-posta bilgilerini eksiksiz doldurunuz.');
       return;
