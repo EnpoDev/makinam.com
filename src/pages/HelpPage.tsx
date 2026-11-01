@@ -25,8 +25,10 @@ import {
   subscribeToFAQs,
   subscribeToHelpSettings
 } from '../lib/helpService';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const HelpPage: React.FC = () => {
+  useDocumentTitle('Yardım ve Sıkça Sorulan Sorular | makinam.com');
   // Real-time Firestore state
   const [faqs, setFaqs] = useState<FAQItem[]>(DEFAULT_FAQS);
   const [settings, setSettings] = useState<HelpSettings>(DEFAULT_HELP_SETTINGS);

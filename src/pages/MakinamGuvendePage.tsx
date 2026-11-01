@@ -19,8 +19,10 @@ import {
   PhoneCall
 } from 'lucide-react';
 import { subscribeToMakinamGuvende, DEFAULT_MAKINAM_GUVENDE, MakinamGuvendeData } from '../lib/portalService';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const MakinamGuvendePage: React.FC = () => {
+  useDocumentTitle('Makinam Güvende - Resmi Güvenli Ticaret Protokolü | makinam.com');
   const navigate = useNavigate();
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [content, setContent] = useState<MakinamGuvendeData>(DEFAULT_MAKINAM_GUVENDE);

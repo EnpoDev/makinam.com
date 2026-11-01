@@ -30,6 +30,7 @@ import { useAuth } from '../context/AuthContext';
 import { compressImage, compressImageToBlob, handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 import { isR2Configured, uploadImageToR2 } from '../lib/r2';
 import { subscribeToPresetPhotos, PresetPhotoItem } from '../lib/portalService';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface PostAdPageProps {
   onAddListing: (newListing: Listing) => Promise<void> | void;
@@ -43,6 +44,7 @@ const TURKISH_CITIES = [
 ];
 
 export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
+  useDocumentTitle('Ücretsiz İlan Ver | makinam.com');
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { categories } = useCategories();
@@ -151,26 +153,33 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    // Safety check for non-R2 environments to protect Firestore 1MB document limit
+    if (!isR2Configured && images.length >= 10) {
+      setFormError('Bulut CDN bağlantısı olmadan Firestore belge boyut sınırını (1 MB) aşmamak için en fazla 10 fotoğraf yükleyebilirsiniz.');
+      e.target.value = '';
+      return;
+    }
+
     setIsUploadingPhotos(true);
     const fileList = Array.from(files);
 
     for (const file of fileList) {
       try {
-        // Her zaman anında ve kusursuz önizleme için optimize edilmiş yerel görseli hazırla
-        const compressed = await compressImage(file, 1200, 900, 0.75);
-
         if (isR2Configured) {
           try {
-            // Özel domain bağlı Cloudflare R2'ye yükle
+            // Özel domain bağlı Cloudflare R2'ye yüksek kalitede yükle
             const blob = await compressImageToBlob(file, 1600, 1200, 0.82);
             const r2Url = await uploadImageToR2(blob);
             setImages((prev) => [...prev, r2Url]);
           } catch (r2Err) {
-            console.warn('R2 yükleme hatası, yerel görsele dönülüyor:', r2Err);
+            console.warn('R2 yükleme hatası, yerel kompakt görsele dönülüyor:', r2Err);
+            // Ultra hafif sıkıştırma ile Firestore'u koru
+            const compressed = await compressImage(file, 800, 600, 0.60);
             setImages((prev) => [...prev, compressed]);
           }
         } else {
-          // Cloudflare'de özel domain tanımlanana kadar doğrudan hafif Base64 kullan
+          // Bulut depolama yokken Firestore 1MB sınırını korumak için 800x600 %60 kompakt sıkıştırma
+          const compressed = await compressImage(file, 800, 600, 0.60);
           setImages((prev) => [...prev, compressed]);
         }
       } catch (err) {

@@ -7,7 +7,9 @@ import { db } from '../lib/firebase';
 import { handleImageFallback } from '../utils/image';
 import { ShareModal } from '../components/ShareModal';
 import { SendMessageModal } from '../components/SendMessageModal';
+import { MakinamGuvendePurchaseModal } from '../components/MakinamGuvendePurchaseModal';
 import { normalizeSearchText, extractDigits } from '../utils/search';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
   ChevronRight,
   ChevronLeft,
@@ -223,6 +225,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
   const [phoneRevealed, setPhoneRevealed] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [isGuvendeModalOpen, setIsGuvendeModalOpen] = useState(false);
   const isItemFavorite = listing ? isFavorite(listing.id) : false;
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'location' | 'safety'>('desc');
 
@@ -253,6 +256,12 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
   const formatPrice = (price: number, currency: string) => {
     return `${price.toLocaleString('tr-TR')} ${currency === 'TL' ? 'TL' : currency}`;
   };
+
+  useDocumentTitle(
+    listing
+      ? `${listing.title} (${listing.year}) - ${formatPrice(listing.price, listing.currency)} | makinam.com`
+      : 'İlan Detayı | makinam.com'
+  );
 
   const fullPhone = listing.seller?.phone?.replace('**', '45') || '0850 123 45 67';
 
@@ -548,6 +557,18 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
               </div>
             </div>
 
+            {/* Makinam Güvende Secure Buy CTA */}
+            {listing.isGuvende && (
+              <button
+                type="button"
+                onClick={() => setIsGuvendeModalOpen(true)}
+                className="w-full bg-[#15803d] hover:bg-[#166534] text-white py-2.5 rounded-[2px] text-center font-bold text-[12.5px] flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+              >
+                <ShieldCheck size={16} />
+                <span>Makinam Güvende ile Satın Al</span>
+              </button>
+            )}
+
             {/* Phone Number Reveal */}
             <div>
               {phoneRevealed ? (
@@ -604,6 +625,13 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
       <SendMessageModal
         isOpen={isMessageModalOpen}
         onClose={() => setIsMessageModalOpen(false)}
+        listing={listing}
+      />
+
+      {/* Makinam Güvende Escrow Purchase Modal */}
+      <MakinamGuvendePurchaseModal
+        isOpen={isGuvendeModalOpen}
+        onClose={() => setIsGuvendeModalOpen(false)}
         listing={listing}
       />
     </div>

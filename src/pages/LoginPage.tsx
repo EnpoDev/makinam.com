@@ -17,6 +17,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +28,14 @@ export const LoginPage: React.FC = () => {
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [accountType, setAccountType] = useState<'bireysel' | 'kurumsal'>('bireysel');
+
+  useDocumentTitle(
+    mode === 'register'
+      ? 'Hesap Aç & Kayıt Ol | makinam.com'
+      : mode === 'forgot'
+      ? 'Şifremi Unuttum | makinam.com'
+      : 'Giriş Yap | makinam.com'
+  );
 
   // Form states
   const [email, setEmail] = useState('');

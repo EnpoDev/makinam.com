@@ -22,8 +22,10 @@ import {
   sendReplyMessage
 } from '../lib/messageService';
 import { handleImageFallback } from '../utils/image';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const MessagesPage: React.FC = () => {
+  useDocumentTitle('Mesajlarım | makinam.com');
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

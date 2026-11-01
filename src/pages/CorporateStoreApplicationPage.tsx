@@ -22,6 +22,7 @@ import {
 import { useCategories } from '../context/CategoryContext';
 import { submitStoreApplication, StoreApplicationFormData } from '../lib/storeApplicationService';
 import { LegalAgreementModal } from '../components/LegalAgreementModal';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const TURKISH_CITIES = [
   'İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep',
@@ -31,6 +32,7 @@ const TURKISH_CITIES = [
 ];
 
 export const CorporateStoreApplicationPage: React.FC = () => {
+  useDocumentTitle('Kurumsal Mağaza Açılış Başvurusu | makinam.com');
   const navigate = useNavigate();
   const { categories } = useCategories();
 

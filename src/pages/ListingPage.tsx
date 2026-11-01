@@ -5,6 +5,7 @@ import { useCategories } from '../context/CategoryContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { handleImageFallback } from '../utils/image';
 import { matchesListingSearch } from '../utils/search';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
   List,
   LayoutGrid,
@@ -52,6 +53,14 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
   const activeCategory = useMemo(() => {
     return categories.find((c) => c.id === categoryParam);
   }, [categoryParam]);
+
+  useDocumentTitle(
+    activeCategory
+      ? `${activeCategory.name} İlanları | makinam.com`
+      : queryParam
+      ? `"${queryParam}" Arama Sonuçları | makinam.com`
+      : 'Tüm Makine İlanları | makinam.com'
+  );
 
   const activeSubCategory = useMemo(() => {
     if (!activeCategory || !subCategoryParam) return null;

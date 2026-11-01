@@ -31,6 +31,7 @@ const MakinamGuvendePage = lazy(() => import('./pages/MakinamGuvendePage').then(
 const CorporateStoreApplicationPage = lazy(() => import('./pages/CorporateStoreApplicationPage').then(m => ({ default: m.CorporateStoreApplicationPage })));
 const LegalAgreementsPage = lazy(() => import('./pages/LegalAgreementsPage').then(m => ({ default: m.LegalAgreementsPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
 const RouteLoadingFallback = () => (
   <div className="min-h-[50vh] flex flex-col items-center justify-center p-8">
@@ -312,6 +313,9 @@ export const AppContent: React.FC = () => {
                   path="/sozlesmeler/:slug"
                   element={<LegalAgreementsPage />}
                 />
+
+                {/* 404 Catch-All */}
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </div>
 

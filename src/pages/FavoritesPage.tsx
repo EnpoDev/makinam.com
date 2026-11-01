@@ -16,12 +16,14 @@ import {
 import { Listing } from '../types';
 import { useFavorites } from '../context/FavoritesContext';
 import { handleImageFallback } from '../utils/image';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface FavoritesPageProps {
   listings: Listing[];
 }
 
 export const FavoritesPage: React.FC<FavoritesPageProps> = ({ listings }) => {
+  useDocumentTitle('Favori İlanlarım | makinam.com');
   const navigate = useNavigate();
   const { favorites, removeFavorite, clearFavorites } = useFavorites();
 

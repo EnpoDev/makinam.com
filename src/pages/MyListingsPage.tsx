@@ -24,6 +24,7 @@ import {
 import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { handleImageFallback } from '../utils/image';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface MyListingsPageProps {
   listings: Listing[];
@@ -42,6 +43,7 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
   onUpdateListing,
   onDeleteListing
 }) => {
+  useDocumentTitle('İlanlarım | makinam.com');
   const navigate = useNavigate();
   const { user, userProfile, loading: authLoading } = useAuth();
   

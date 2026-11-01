@@ -11,6 +11,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { LEGAL_AGREEMENTS, LegalAgreement } from '../data/legalAgreements';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export const LegalAgreementsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -19,6 +20,8 @@ export const LegalAgreementsPage: React.FC = () => {
   const activeSlug = slug && LEGAL_AGREEMENTS[slug] ? slug : 'kurumsal-magaza-sozlesmesi';
   const currentAgreement: LegalAgreement =
     LEGAL_AGREEMENTS[activeSlug] || LEGAL_AGREEMENTS['kurumsal-magaza-sozlesmesi'];
+
+  useDocumentTitle(`${currentAgreement.title} | makinam.com`);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
 

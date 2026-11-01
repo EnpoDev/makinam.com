@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { detectTurkishBankFromIBAN, formatTurkishIBAN, TURKISH_BANKS } from '../utils/iban';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const TURKISH_CITIES = [
   'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
@@ -35,6 +36,7 @@ const TURKISH_CITIES = [
 ];
 
 export const ProfilePage: React.FC = () => {
+  useDocumentTitle('Hesap ve Profil Ayarları | makinam.com');
   const navigate = useNavigate();
   const { user, userProfile, updateUserProfile } = useAuth();
 

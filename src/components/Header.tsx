@@ -6,6 +6,7 @@ import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { normalizeSearchText, extractDigits } from '../utils/search';
+import { subscribeToUserConversations } from '../lib/messageService';
 
 interface HeaderProps {
   listings?: Listing[];
@@ -27,8 +28,28 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
   const [searchTerm, setSearchTerm] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Subscribe to real-time user conversations to calculate unread badge
+  useEffect(() => {
+    if (!user) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+
+    const unsubscribe = subscribeToUserConversations(user.uid, (conversations) => {
+      const count = conversations.filter((c) => {
+        if (c.sellerId === user.uid && c.unreadBySeller) return true;
+        if (c.buyerId === user.uid && c.unreadByBuyer) return true;
+        return false;
+      }).length;
+      setUnreadMessagesCount(count);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   // Close user dropdown when clicking outside
   useEffect(() => {
@@ -210,10 +231,15 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="bg-[#214266] hover:bg-[#2b5482] text-white px-3 py-1.5 rounded-[3px] flex items-center gap-2 transition-colors border border-[#305e91] text-[12px]"
+                className="relative bg-[#214266] hover:bg-[#2b5482] text-white px-3 py-1.5 rounded-[3px] flex items-center gap-2 transition-colors border border-[#305e91] text-[12px]"
               >
-                <div className="w-5 h-5 rounded-full bg-[#ea580c] text-white flex items-center justify-center font-bold text-[10px]">
-                  {displayName.charAt(0).toUpperCase()}
+                <div className="relative">
+                  <div className="w-5 h-5 rounded-full bg-[#ea580c] text-white flex items-center justify-center font-bold text-[10px]">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  {unreadMessagesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-[#214266]"></span>
+                  )}
                 </div>
                 <span className="font-semibold max-w-[120px] truncate">{displayName}</span>
                 <ChevronDown size={13} className={`text-[#cbd5e1] transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
@@ -271,6 +297,11 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
                         <MessageSquare size={13} className="text-[#0284c7]" />
                         <span>Mesajlarım</span>
                       </div>
+                      {unreadMessagesCount > 0 && (
+                        <span className="bg-[#ea580c] text-white text-[9.5px] font-bold px-1.5 py-0.2 rounded-full">
+                          {unreadMessagesCount}
+                        </span>
+                      )}
                     </button>
                     <button
                       onClick={() => {
@@ -429,10 +460,15 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
                     navigate('/hesabim/mesajlarim');
                     setMobileMenuOpen(false);
                   }}
-                  className="bg-[#214266] text-white py-2 px-2 rounded-[3px] font-semibold text-center flex items-center justify-center gap-1 text-[11px]"
+                  className="relative bg-[#214266] text-white py-2 px-2 rounded-[3px] font-semibold text-center flex items-center justify-center gap-1 text-[11px]"
                 >
                   <MessageSquare size={12} className="text-[#0284c7]" />
                   <span>Mesajlarım</span>
+                  {unreadMessagesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#ea580c] text-white text-[8.5px] font-bold px-1 rounded-full">
+                      {unreadMessagesCount}
+                    </span>
+                  )}
                 </button>
               </div>
               <button

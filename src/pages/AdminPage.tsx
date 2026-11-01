@@ -78,6 +78,7 @@ import {
   PopularBrandItem
 } from '../lib/portalService';
 import { DEFAULT_MACHINE_IMAGE } from '../utils/image';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface AdminPageProps {
   listings: Listing[];
@@ -87,6 +88,7 @@ interface AdminPageProps {
 type AdminTab = 'dashboard' | 'applications' | 'listings' | 'users' | 'settings';
 
 export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
+  useDocumentTitle('Yönetim Konsolu | makinam.com');
   const navigate = useNavigate();
   const { user, userProfile, logout } = useAuth();
 
