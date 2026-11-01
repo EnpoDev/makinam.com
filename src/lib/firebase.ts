@@ -185,3 +185,18 @@ export const updateListingStatusInFirestore = async (
     throw error;
   }
 };
+
+// Helper: Update arbitrary listing fields in Firestore
+export const updateListingInFirestore = async (
+  listingId: string,
+  updates: Record<string, any>
+): Promise<void> => {
+  try {
+    const docRef = doc(db, "listings", listingId);
+    await updateDoc(docRef, updates);
+    console.log("İlan Firestore'da güncellendi:", listingId, updates);
+  } catch (error) {
+    console.error("Firestore'da ilan güncellenirken hata:", error);
+    throw error;
+  }
+};

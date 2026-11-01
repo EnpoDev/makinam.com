@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Listing } from '../types';
 import { useFavorites } from '../context/FavoritesContext';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleImageFallback } from '../utils/image';
 import { ShareModal } from '../components/ShareModal';
@@ -197,6 +197,26 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
 
   const listing = inMemoryListing || directDoc;
   const isPageLoading = (isLoading && !listing) || (isFetchingDirect && !listing);
+
+  // Increment real-time view count in Firestore (once per user session)
+  useEffect(() => {
+    if (!listing?.id) return;
+    const sessionKey = `viewed_ad_${listing.id}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+    sessionStorage.setItem(sessionKey, '1');
+
+    const incrementViews = async () => {
+      try {
+        const docRef = doc(db, 'listings', listing.id);
+        await updateDoc(docRef, {
+          viewsCount: increment(1)
+        });
+      } catch (e) {
+        // Silently continue if rules/network fail
+      }
+    };
+    incrementViews();
+  }, [listing?.id]);
 
   const { toggleFavorite, isFavorite } = useFavorites();
   const [activeImageIndex, setActiveImageIndex] = useState(0);

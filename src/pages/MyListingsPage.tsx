@@ -17,7 +17,9 @@ import {
   TrendingUp,
   SlidersHorizontal,
   ChevronRight,
-  Settings
+  Settings,
+  X,
+  Save
 } from 'lucide-react';
 import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +30,7 @@ interface MyListingsPageProps {
   isLoading?: boolean;
   onOpenPostAd: () => void;
   onUpdateListingStatus?: (listingId: string, newStatus: 'active' | 'passive' | 'sold') => void;
+  onUpdateListing?: (listingId: string, updates: Partial<Listing>) => void;
   onDeleteListing?: (listingId: string) => void;
 }
 
@@ -36,6 +39,7 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
   isLoading = false,
   onOpenPostAd,
   onUpdateListingStatus,
+  onUpdateListing,
   onDeleteListing
 }) => {
   const navigate = useNavigate();
@@ -44,6 +48,55 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'passive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Edit Listing State
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    price: 0,
+    currency: 'TL' as 'TL' | 'USD' | 'EUR',
+    year: 2020,
+    hours: 0,
+    city: '',
+    district: '',
+    description: '',
+    status: 'active' as 'active' | 'passive'
+  });
+
+  const handleStartEdit = (listing: Listing) => {
+    setEditingListing(listing);
+    setEditFormData({
+      title: listing.title || '',
+      price: listing.price || 0,
+      currency: (listing.currency as any) || 'TL',
+      year: listing.year || 2020,
+      hours: listing.hours || 0,
+      city: listing.city || '',
+      district: listing.district || '',
+      description: listing.description || '',
+      status: (listing.status as any) || 'active',
+    });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingListing) return;
+    setIsSaving(true);
+    try {
+      if (onUpdateListing) {
+        await onUpdateListing(editingListing.id, editFormData);
+      }
+      setStatusMessage(`"${editFormData.title}" ilanı başarıyla güncellendi.`);
+      setEditingListing(null);
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (error) {
+      console.error('İlan güncellenirken hata oluştu:', error);
+      alert('İlan güncellenirken bir hata oluştu.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const displayName = userProfile?.displayName || user?.displayName || user?.email?.split('@')[0] || '';
   const email = user?.email || userProfile?.email || 'enespoyraz380@gmail.com';
@@ -385,6 +438,16 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
                             <ExternalLink size={14} />
                           </Link>
 
+                          {/* Edit Listing */}
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item)}
+                            title="İlanı Düzenle"
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-[3px] transition-colors"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+
                           {/* Toggle Active / Passive */}
                           <button
                             type="button"
@@ -440,6 +503,185 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
           </div>
         )}
       </div>
+
+      {/* 5. EDIT LISTING MODAL */}
+      {editingListing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px] animate-in fade-in">
+          <div className="bg-white rounded-[6px] shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-slate-200 overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-[#19324d] text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-[16px] font-bold">İlanı Düzenle</h3>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  İlan No: #{editingListing.id} • {editingListing.brand} {editingListing.model}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingListing(null)}
+                className="text-slate-300 hover:text-white p-1 rounded transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                  İlan Başlığı <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none"
+                  placeholder="Örn: 2021 Model Temiz Hidromek 102B Kazıcı Yükleyici"
+                />
+              </div>
+
+              {/* Price & Currency */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                    Fiyat <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={editFormData.price}
+                    onChange={(e) => setEditFormData({ ...editFormData, price: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                    Para Birimi
+                  </label>
+                  <select
+                    value={editFormData.currency}
+                    onChange={(e) => setEditFormData({ ...editFormData, currency: e.target.value as any })}
+                    className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none bg-white"
+                  >
+                    <option value="TL">TL (₺)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Year & Working Hours */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                    Model Yılı
+                  </label>
+                  <input
+                    type="number"
+                    min={1970}
+                    max={2030}
+                    value={editFormData.year}
+                    onChange={(e) => setEditFormData({ ...editFormData, year: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                    Çalışma Saati (Saat)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editFormData.hours}
+                    onChange={(e) => setEditFormData({ ...editFormData, hours: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* City & District */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                    Şehir
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.city}
+                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                    className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none"
+                    placeholder="Örn: İstanbul"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                    İlçe
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.district}
+                    onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
+                    className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none"
+                    placeholder="Örn: Tuzla"
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                  Yayın Durumu
+                </label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as any })}
+                  className="w-full px-3 py-2 text-[13px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none bg-white"
+                >
+                  <option value="active">Yayında (Aktif)</option>
+                  <option value="passive">Pasif (Gizli)</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-700 mb-1">
+                  Açıklama & Detaylar
+                </label>
+                <textarea
+                  rows={5}
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="w-full px-3 py-2 text-[12.5px] border border-slate-300 rounded focus:border-[#ea580c] focus:outline-none resize-y"
+                  placeholder="Makinenin durumu, bakımları, aksesuarları hakkında bilgi veriniz..."
+                />
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingListing(null)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded text-[12.5px] font-medium transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-5 py-2 bg-[#ea580c] hover:bg-[#c2410c] text-white rounded text-[12.5px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  <Save size={15} />
+                  <span>{isSaving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

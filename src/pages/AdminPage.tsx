@@ -77,6 +77,7 @@ import {
   subscribeToPopularSearches,
   PopularBrandItem
 } from '../lib/portalService';
+import { DEFAULT_MACHINE_IMAGE } from '../utils/image';
 
 interface AdminPageProps {
   listings: Listing[];
@@ -1350,7 +1351,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                         >
                           <div className="flex items-center gap-3">
                             <img
-                              src={item.images?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=150&q=80'}
+                              src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
                               alt={item.title}
                               className="w-10 h-8 object-cover rounded border border-[#cbd5e1]"
                             />
@@ -2025,7 +2026,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                             <div key={item.id} className="py-2 flex items-center justify-between text-[11.5px]">
                               <div className="flex items-center gap-2">
                                 <img
-                                  src={item.images?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=100&q=80'}
+                                  src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
                                   alt={item.title}
                                   className="w-8 h-6 object-cover rounded border border-[#cbd5e1]"
                                 />
@@ -2283,7 +2284,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ listings = [] }) => {
                           </thead>
                           <tbody className="divide-y divide-[#f1f5f9]">
                             {filteredListings.map((item) => {
-                              const thumb = item.images?.[0] || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=300&q=80';
+                              const thumb = item.images?.[0] || DEFAULT_MACHINE_IMAGE;
                               const status = item.status || 'active';
                               return (
                                 <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors">

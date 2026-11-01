@@ -134,10 +134,14 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
               Yardım / SSS
             </Link>
             <span className="text-[#334155]">|</span>
-            <span className="flex items-center gap-1 text-[#cbd5e1] font-medium">
+            <a
+              href="tel:08501234567"
+              className="flex items-center gap-1 text-[#cbd5e1] hover:text-white font-medium transition-colors"
+              title="Müşteri Hizmetlerini Ara"
+            >
               <Phone size={11} className="text-[#f97316]" />
               0850 123 45 67
-            </span>
+            </a>
           </div>
         </div>
       </div>
@@ -297,13 +301,16 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
                     {userProfile?.accountType === 'kurumsal' && (
                       <button
                         onClick={() => {
-                          alert('Mağaza Yönetim Paneli: Kurumsal mağaza ve toplu ilan yönetimi.');
+                          navigate('/hesabim/ilanlarim');
                           setUserMenuOpen(false);
                         }}
-                        className="w-full text-left px-3 py-1.5 hover:bg-[#f1f5f9] flex items-center gap-2 text-[#334155]"
+                        className="w-full text-left px-3 py-1.5 hover:bg-emerald-50/50 flex items-center justify-between text-emerald-800 font-semibold"
                       >
-                        <Building2 size={13} className="text-emerald-600" />
-                        <span>Mağazamı Yönet</span>
+                        <div className="flex items-center gap-2">
+                          <Building2 size={13} className="text-emerald-600" />
+                          <span>Kurumsal Mağazamı Yönet</span>
+                        </div>
+                        <ChevronRight size={12} className="text-emerald-500" />
                       </button>
                     )}
                   </div>

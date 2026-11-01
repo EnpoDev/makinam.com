@@ -27,7 +27,7 @@ import {
 import { useCategories } from '../context/CategoryContext';
 import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { compressImage, compressImageToBlob, handleImageFallback } from '../utils/image';
+import { compressImage, compressImageToBlob, handleImageFallback, DEFAULT_MACHINE_IMAGE } from '../utils/image';
 import { isR2Configured, uploadImageToR2 } from '../lib/r2';
 import { subscribeToPresetPhotos, PresetPhotoItem } from '../lib/portalService';
 
@@ -209,7 +209,7 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
     const finalImages =
       images.length > 0
         ? images
-        : ['https://images.unsplash.com/photo-1585515320310-259814833e62?auto=format&fit=crop&w=800&q=80'];
+        : [DEFAULT_MACHINE_IMAGE];
 
     const newAd: Listing = {
       id: generatedId,
@@ -1141,7 +1141,7 @@ export const PostAdPage: React.FC<PostAdPageProps> = ({ onAddListing }) => {
                     <img
                       src={
                         images[0] ||
-                        'https://images.unsplash.com/photo-1585515320310-259814833e62?auto=format&fit=crop&w=800&q=80'
+                        DEFAULT_MACHINE_IMAGE
                       }
                       alt={title || 'Makine'}
                       className="w-full h-full object-cover"

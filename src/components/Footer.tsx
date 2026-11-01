@@ -14,11 +14,11 @@ export const Footer: React.FC = () => {
               Kurumsal
             </h4>
             <ul className="space-y-1.5">
-              <li><a href="#about" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Hakkımızda</a></li>
-              <li><a href="#media" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Basın & Medya</a></li>
-              <li><a href="#careers" className="hover:underline text-[#64748b] hover:text-[#0284c7]">İnsan Kaynakları</a></li>
-              <li><a href="#contact" className="hover:underline text-[#64748b] hover:text-[#0284c7]">İletişim & Ofisler</a></li>
-              <li><a href="#csr" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Sosyal Sorumluluk</a></li>
+              <li><Link to="/yardim" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Hakkımızda</Link></li>
+              <li><Link to="/yardim" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Basın & Medya</Link></li>
+              <li><Link to="/kurumsal-magaza-ac" className="hover:underline text-[#64748b] hover:text-[#0284c7]">İnsan Kaynakları</Link></li>
+              <li><Link to="/yardim" className="hover:underline text-[#64748b] hover:text-[#0284c7]">İletişim & Ofisler</Link></li>
+              <li><Link to="/makinam-guvende" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Sosyal Sorumluluk</Link></li>
             </ul>
           </div>
 
@@ -70,11 +70,11 @@ export const Footer: React.FC = () => {
               Bizi Takip Edin
             </h4>
             <ul className="space-y-1.5">
-              <li><a href="#in" className="hover:underline text-[#64748b] hover:text-[#0284c7]">LinkedIn</a></li>
-              <li><a href="#ig" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Instagram</a></li>
-              <li><a href="#yt" className="hover:underline text-[#64748b] hover:text-[#0284c7]">YouTube</a></li>
-              <li><a href="#x" className="hover:underline text-[#64748b] hover:text-[#0284c7]">X (Twitter)</a></li>
-              <li><a href="#fb" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Facebook</a></li>
+              <li><a href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:underline text-[#64748b] hover:text-[#0284c7]">LinkedIn</a></li>
+              <li><a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Instagram</a></li>
+              <li><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" className="hover:underline text-[#64748b] hover:text-[#0284c7]">YouTube</a></li>
+              <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:underline text-[#64748b] hover:text-[#0284c7]">X (Twitter)</a></li>
+              <li><a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" className="hover:underline text-[#64748b] hover:text-[#0284c7]">Facebook</a></li>
             </ul>
           </div>
         </div>
@@ -88,7 +88,13 @@ export const Footer: React.FC = () => {
               </div>
               <div>
                 <div className="text-[10px] text-[#64748b] uppercase font-bold">Müşteri Hizmetleri (09:00 - 18:00)</div>
-                <div className="font-bold text-[#1e293b] text-[12px]">0 850 123 45 67</div>
+                <a
+                  href="tel:08501234567"
+                  className="font-bold text-[#1e293b] text-[12px] hover:text-[#ea580c] transition-colors"
+                  title="Müşteri Hizmetlerini Ara"
+                >
+                  0 850 123 45 67
+                </a>
               </div>
             </div>
 

@@ -57,6 +57,11 @@ export const SidebarCategories: React.FC<SidebarCategoriesProps> = ({
     return listings.filter((l) => l.category === catId).length;
   };
 
+  const getSubCategoryCount = (catId: string, subId: string, fallbackCount: number) => {
+    if (!listings || listings.length === 0) return fallbackCount;
+    return listings.filter((l) => l.category === catId && (l.subCategory === subId || l.subCategory?.toLowerCase() === subId.toLowerCase())).length;
+  };
+
   const getCategoryIcon = (iconName: string) => {
     const props = { size: 14, className: 'text-[#19324d]' };
     switch (iconName) {
@@ -244,7 +249,7 @@ export const SidebarCategories: React.FC<SidebarCategoriesProps> = ({
                       >
                         <span className="truncate hover:underline">{sub.name}</span>
                         <span className="text-[10px] text-[#94a3b8] shrink-0 ml-1">
-                          {sub.count.toLocaleString('tr-TR')}
+                          {getSubCategoryCount(category.id, sub.id, sub.count).toLocaleString('tr-TR')}
                         </span>
                       </a>
                     </li>
@@ -254,7 +259,7 @@ export const SidebarCategories: React.FC<SidebarCategoriesProps> = ({
                       onClick={() => handleCategoryClick(category.id)}
                       className="text-[10px] text-[#0284c7] font-semibold hover:underline"
                     >
-                      Tümünü Gör ({category.count.toLocaleString('tr-TR')}) »
+                      Tümünü Gör ({getCategoryCount(category.id, category.count).toLocaleString('tr-TR')}) »
                     </button>
                   </li>
                 </ul>

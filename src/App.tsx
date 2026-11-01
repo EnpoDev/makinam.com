@@ -16,8 +16,6 @@ import { MakinamGuvendePage } from './pages/MakinamGuvendePage';
 import { CorporateStoreApplicationPage } from './pages/CorporateStoreApplicationPage';
 import { LegalAgreementsPage } from './pages/LegalAgreementsPage';
 import { AdminPage } from './pages/AdminPage';
-import { PostAdModal } from './components/PostAdModal';
-import { AuthModal } from './components/AuthModal';
 import { AuthProvider } from './context/AuthContext';
 import { FavoritesProvider, useFavorites } from './context/FavoritesContext';
 import { CategoryProvider } from './context/CategoryContext';
@@ -28,16 +26,14 @@ import {
   addListingToFirestore, 
   subscribeToListings,
   deleteListingFromFirestore,
-  updateListingStatusInFirestore
+  updateListingStatusInFirestore,
+  updateListingInFirestore
 } from './lib/firebase';
 
 export const AppContent: React.FC = () => {
   const { cleanOrphanFavorites, removeFavorite } = useFavorites();
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoadingListings, setIsLoadingListings] = useState<boolean>(true);
-  const [isPostAdOpen, setIsPostAdOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const navigate = useNavigate();
 
   // Sync exclusively with Firestore real-time database
@@ -109,6 +105,20 @@ export const AppContent: React.FC = () => {
       await updateListingStatusInFirestore(listingId, newStatus);
     } catch (err) {
       console.error("Firestore'da ilan durumu güncellenirken hata:", err);
+    }
+  };
+
+  const handleUpdateListing = async (listingId: string, updates: Partial<Listing>) => {
+    // Optimistic local update
+    setListings((prev) =>
+      prev.map((l) => (l.id === listingId ? { ...l, ...updates } : l))
+    );
+
+    // Persist updates to Firestore
+    try {
+      await updateListingInFirestore(listingId, updates);
+    } catch (err) {
+      console.error("Firestore'da ilan güncellenirken hata:", err);
     }
   };
 
@@ -194,6 +204,7 @@ export const AppContent: React.FC = () => {
                       isLoading={isLoadingListings}
                       onOpenPostAd={() => navigate('/ilan-ver')}
                       onUpdateListingStatus={handleUpdateListingStatus}
+                      onUpdateListing={handleUpdateListing}
                       onDeleteListing={handleDeleteListing}
                     />
                   }
@@ -206,6 +217,7 @@ export const AppContent: React.FC = () => {
                       isLoading={isLoadingListings}
                       onOpenPostAd={() => navigate('/ilan-ver')}
                       onUpdateListingStatus={handleUpdateListingStatus}
+                      onUpdateListing={handleUpdateListing}
                       onDeleteListing={handleDeleteListing}
                     />
                   }
@@ -294,18 +306,6 @@ export const AppContent: React.FC = () => {
             </div>
 
             <Footer />
-
-            <PostAdModal
-              isOpen={isPostAdOpen}
-              onClose={() => setIsPostAdOpen(false)}
-              onAddListing={handleAddListing}
-            />
-
-            <AuthModal
-              isOpen={isAuthOpen}
-              onClose={() => setIsAuthOpen(false)}
-              initialMode={authMode}
-            />
           </div>
         }
       />
