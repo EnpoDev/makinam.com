@@ -41,7 +41,7 @@ export async function adminUpdateUserProfile(
   try {
     const userDocRef = doc(db, 'users', uid);
     const cleaned = cleanFirestoreDoc({ ...updates, updatedAt: serverTimestamp() });
-    await updateDoc(userDocRef, cleaned);
+    await setDoc(userDocRef, cleaned, { merge: true });
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error?.message || 'Kullanıcı güncellenemedi.' };

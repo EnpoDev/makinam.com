@@ -19,7 +19,8 @@ import {
   ChatMessage,
   subscribeToUserConversations,
   subscribeToConversationMessages,
-  sendReplyMessage
+  sendReplyMessage,
+  markConversationAsRead
 } from '../lib/messageService';
 import { handleImageFallback } from '../utils/image';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -56,22 +57,25 @@ export const MessagesPage: React.FC = () => {
     return () => unsubscribe();
   }, [currentUserId]);
 
-  // 2. Subscribe to messages of active conversation
+  // 2. Subscribe to messages of active conversation and mark unread flags as read
   useEffect(() => {
     if (!selectedConversationId) {
       setMessages([]);
       return;
     }
 
+    markConversationAsRead(selectedConversationId, currentUserId);
+
     const unsubscribe = subscribeToConversationMessages(
       selectedConversationId,
       (msgs) => {
         setMessages(msgs);
+        markConversationAsRead(selectedConversationId, currentUserId);
       }
     );
 
     return () => unsubscribe();
-  }, [selectedConversationId]);
+  }, [selectedConversationId, currentUserId]);
 
   // Scroll to bottom on new messages
   useEffect(() => {

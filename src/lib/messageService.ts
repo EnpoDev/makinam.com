@@ -319,3 +319,47 @@ export function subscribeToConversationMessages(
 
   return unsubscribe;
 }
+
+/**
+ * Marks a conversation as read by the specified user (clearing unread flags).
+ */
+export async function markConversationAsRead(
+  conversationId: string,
+  userId: string
+): Promise<void> {
+  if (!conversationId || !userId) return;
+
+  // 1. Update in local storage
+  try {
+    const local = getLocalConversations();
+    const target = local.find((c) => c.id === conversationId);
+    if (target) {
+      if (target.sellerId === userId) target.unreadBySeller = false;
+      if (target.buyerId === userId) target.unreadByBuyer = false;
+      saveLocalConversation(target);
+    }
+  } catch (e) {
+    console.warn('Local storage unread update error:', e);
+  }
+
+  // 2. Update in Firestore
+  try {
+    const convRef = doc(db, 'conversations', conversationId);
+    const snap = await getDoc(convRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const updates: any = {};
+      if (data.sellerId === userId && data.unreadBySeller) {
+        updates.unreadBySeller = false;
+      }
+      if (data.buyerId === userId && data.unreadByBuyer) {
+        updates.unreadByBuyer = false;
+      }
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(convRef, updates);
+      }
+    }
+  } catch (err) {
+    console.warn('Firestore markConversationAsRead hatası:', err);
+  }
+}
