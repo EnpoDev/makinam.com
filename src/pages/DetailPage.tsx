@@ -298,7 +298,7 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
   );
 
   return (
-    <div className="max-w-[1240px] mx-auto px-3 py-3 font-sans">
+    <div className="max-w-[1240px] mx-auto px-3 py-3 font-sans pb-20 lg:pb-3">
       {/* 1. BREADCRUMBS */}
       <div className="flex items-center gap-1.5 text-[11px] text-[#64748b] mb-2 flex-wrap">
         <Link to="/" className="text-[#0284c7] hover:underline">
@@ -457,7 +457,31 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
             )}
           </div>
 
-          {/* Description & Specs Tabs */}
+          {/* MOBILE PRICE & QUICK SUMMARY BAR (Visible only on mobile/tablet < lg) */}
+          <div className="lg:hidden bg-white border border-[#cbd5e1] rounded-[3px] p-3 mb-3 shadow-xs">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="text-[22px] font-black text-[#b91c1c] tracking-tight">
+                {formatPrice(listing.price, listing.currency)}
+              </div>
+              <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                Pazarlık Payı Var
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-[#475569] mt-2 flex-wrap">
+              <span className="flex items-center gap-1 font-semibold text-[#1e293b]">
+                <MapPin size={12} className="text-[#ea580c]" />
+                {listing.city} / {listing.district}
+              </span>
+              <span>•</span>
+              <span className="font-semibold text-[#0f172a]">{listing.brand}</span>
+              <span>•</span>
+              <span className="font-mono">{listing.year}</span>
+              <span>•</span>
+              <span className="bg-slate-100 text-[#334155] px-1.5 py-0.2 rounded font-medium">
+                {listing.seller?.type || 'Bireysel'}
+              </span>
+            </div>
+          </div>
           <div className="bg-white border border-[#cbd5e1] rounded-[3px] shadow-xs overflow-hidden">
             <div className="flex border-b border-[#cbd5e1] bg-[#f8fafc] text-[12px] font-bold">
               <button
@@ -717,6 +741,87 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
               <li>Ödemelerinizi Makinam Güvende havuz hesabı üzerinden gerçekleştiriniz.</li>
             </ul>
           </div>
+        </div>
+      </div>
+
+      {/* 4. MOBILE STICKY ACTION BAR (Visible only on mobile/tablet < lg) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#cbd5e1] px-3 py-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center justify-between gap-2.5">
+        <div className="min-w-0">
+          <div className="text-[10px] text-[#64748b] font-medium leading-none">Fiyat</div>
+          <div className="text-[15px] font-black text-[#b91c1c] tracking-tight truncate leading-tight mt-0.5">
+            {formatPrice(listing.price, listing.currency)}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isOwner ? (
+            <Link
+              to="/hesabim/ilanlarim"
+              className="px-3.5 py-2 bg-[#19324d] hover:bg-[#122438] text-white rounded text-[11.5px] font-bold flex items-center gap-1.5 shadow-xs"
+            >
+              <Edit3 size={13} />
+              <span>İlanımı Yönet</span>
+            </Link>
+          ) : isInactive ? (
+            <span className="px-3 py-2 bg-slate-100 text-slate-500 rounded text-[11px] font-bold">
+              {isSold ? 'Satıldı' : 'Yayında Değil'}
+            </span>
+          ) : (
+            <>
+              {listing.isGuvende && (
+                <button
+                  type="button"
+                  onClick={() => setIsGuvendeModalOpen(true)}
+                  className="px-2.5 py-2 bg-[#15803d] hover:bg-[#166534] text-white rounded text-[11px] font-bold flex items-center gap-1 shadow-xs"
+                  title="Makinam Güvende ile Satın Al"
+                >
+                  <ShieldCheck size={13} />
+                  <span>Güvende Al</span>
+                </button>
+              )}
+
+              {isMobile && (
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded flex items-center justify-center shadow-xs"
+                  title="WhatsApp"
+                >
+                  <MessageCircle size={17} />
+                </a>
+              )}
+
+              {isValidPhone ? (
+                phoneRevealed ? (
+                  <a
+                    href={`tel:${cleanPhoneDigits}`}
+                    className="px-3 py-2 bg-[#16a34a] hover:bg-[#15803d] text-white rounded text-[11.5px] font-bold flex items-center gap-1 shadow-xs"
+                  >
+                    <Phone size={13} />
+                    <span>Ara</span>
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => setPhoneRevealed(true)}
+                    className="px-3 py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white rounded text-[11.5px] font-bold flex items-center gap-1 shadow-xs"
+                  >
+                    <Phone size={13} />
+                    <span>Ara</span>
+                  </button>
+                )
+              ) : null}
+
+              <button
+                onClick={() => setIsMessageModalOpen(true)}
+                className="px-3 py-2 bg-orange-50 border border-[#ea580c] text-[#ea580c] hover:bg-[#ea580c] hover:text-white rounded text-[11.5px] font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                title="Mesaj Gönder"
+              >
+                <MessageSquare size={13} />
+                <span>Mesaj</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

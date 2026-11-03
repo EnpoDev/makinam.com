@@ -41,6 +41,7 @@ export const SidebarCategories: React.FC<SidebarCategoriesProps> = ({
     'is-insaat-makineleri': true,
     'sanayi-imalat-makineleri': true
   });
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const sahibindenCount = useMemo(() => {
     if (!listings || listings.length === 0) return 0;
@@ -112,8 +113,31 @@ export const SidebarCategories: React.FC<SidebarCategoriesProps> = ({
 
   return (
     <aside className="w-full md:w-[240px] shrink-0 font-sans space-y-2.5">
-      {/* 1. QUICK DIRECTORY SHORTCUTS */}
-      <div className="bg-white border border-[#cbd5e1] rounded-[3px] overflow-hidden shadow-xs">
+      {/* Mobile Accordion Toggle Header */}
+      <div className="md:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          className="w-full bg-[#19324d] hover:bg-[#122438] text-white px-3 py-2.5 rounded-[3px] flex items-center justify-between shadow-xs font-bold text-[12px] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Tag size={14} className="text-[#ea580c]" />
+            <span>Kategoriler & Hızlı Menü</span>
+            <span className="text-[10px] bg-[#214266] text-[#cbd5e1] px-1.5 py-0.2 rounded font-normal">
+              {categories.length} Kategori
+            </span>
+          </div>
+          <ChevronDown
+            size={16}
+            className={`transition-transform duration-200 ${mobileOpen ? 'rotate-180 text-[#ea580c]' : 'text-slate-300'}`}
+          />
+        </button>
+      </div>
+
+      {/* Main Category Body - Visible on desktop always, toggleable on mobile */}
+      <div className={`${mobileOpen ? 'block' : 'hidden'} md:block space-y-2.5`}>
+        {/* 1. QUICK DIRECTORY SHORTCUTS */}
+        <div className="bg-white border border-[#cbd5e1] rounded-[3px] overflow-hidden shadow-xs">
         <div className="bg-[#f8fafc] px-3 py-1.5 border-b border-[#e2e8f0] flex items-center justify-between">
           <span className="text-[11px] font-bold text-[#1e293b] uppercase tracking-wide">
             Hızlı Menü
@@ -281,6 +305,7 @@ export const SidebarCategories: React.FC<SidebarCategoriesProps> = ({
         >
           Mağaza Açılış Başvurusu »
         </button>
+      </div>
       </div>
     </aside>
   );

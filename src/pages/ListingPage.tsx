@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Filter,
   RotateCcw,
   Camera,
@@ -203,6 +204,22 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
     sortBy
   ]);
 
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (categoryParam) count++;
+    if (subCategoryParam) count++;
+    if (selectedCity) count++;
+    if (selectedBrand) count++;
+    if (minPrice || maxPrice) count++;
+    if (minYear || maxYear) count++;
+    if (sellerType && sellerType !== 'all') count++;
+    if (urgentParam) count++;
+    if (guvendeParam) count++;
+    return count;
+  }, [categoryParam, subCategoryParam, selectedCity, selectedBrand, minPrice, maxPrice, minYear, maxYear, sellerType, urgentParam, guvendeParam]);
+
   const resetFilters = () => {
     setSelectedCity('');
     setMinPrice('');
@@ -284,8 +301,43 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-3">
+        {/* MOBILE FILTER TOGGLE BAR (Visible only on mobile/tablet < md) */}
+        <div className="md:hidden flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+            className="flex-1 bg-white border border-[#cbd5e1] hover:bg-slate-50 py-2.5 px-3 rounded-[3px] text-[12px] font-bold text-[#1e293b] flex items-center justify-between shadow-2xs transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Filter size={14} className="text-[#ea580c]" />
+              <span>Filtrele & Kategoriler</span>
+              {activeFilterCount > 0 && (
+                <span className="bg-[#ea580c] text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                  {activeFilterCount}
+                </span>
+              )}
+            </div>
+            <ChevronDown
+              size={16}
+              className={`transition-transform duration-200 ${mobileFiltersOpen ? 'rotate-180 text-[#ea580c]' : 'text-slate-400'}`}
+            />
+          </button>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="px-3 py-2.5 bg-slate-100 border border-[#cbd5e1] text-[#b91c1c] text-[11px] font-bold rounded-[3px] hover:bg-red-50 flex items-center gap-1 shadow-2xs shrink-0"
+              title="Filtreleri Temizle"
+            >
+              <RotateCcw size={12} />
+              <span>Sıfırla</span>
+            </button>
+          )}
+        </div>
+
         {/* 2. LEFT FILTER SIDEBAR */}
-        <aside className="w-full md:w-[240px] shrink-0 space-y-2.5">
+        <aside className={`w-full md:w-[240px] shrink-0 space-y-2.5 ${mobileFiltersOpen ? 'block' : 'hidden'} md:block`}>
           {/* Category Tree inside Filter */}
           <div className="bg-white border border-[#cbd5e1] rounded-[3px] p-2.5">
             <h3 className="font-bold text-[11px] text-[#1e293b] uppercase tracking-wide mb-2 pb-1 border-b border-[#e2e8f0]">
@@ -661,6 +713,10 @@ export const ListingPage: React.FC<ListingPageProps> = ({ listings }) => {
                               ACİL
                             </span>
                           )}
+                        </div>
+                        {/* Mobile summary line (visible only on mobile < sm) */}
+                        <div className="sm:hidden text-[9.5px] text-[#64748b] mt-0.5 truncate">
+                          {item.city} • {item.year} • {item.brand}
                         </div>
                       </td>
 

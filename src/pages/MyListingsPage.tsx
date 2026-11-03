@@ -365,7 +365,7 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
           </div>
         </div>
 
-        {/* Listings Table View */}
+        {/* Listings Table & Mobile Cards View */}
         {isLoading || authLoading ? (
           <div className="py-16 text-center">
             <div className="inline-block w-8 h-8 border-3 border-[#ea580c] border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -373,80 +373,191 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
             <div className="text-[11px] text-[#64748b] mt-1">Lütfen bekleyiniz.</div>
           </div>
         ) : filteredListings.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[12px] border-collapse">
-              <thead>
-                <tr className="bg-[#f1f5f9] text-[#475569] font-bold text-[11px] border-b border-[#e2e8f0]">
-                  <th className="py-2.5 px-3 w-[80px]">Fotoğraf</th>
-                  <th className="py-2.5 px-3 min-w-[280px]">İlan Başlığı & Detay</th>
-                  <th className="py-2.5 px-3 w-[130px]">Fiyat</th>
-                  <th className="py-2.5 px-3 w-[100px]">İlan Tarihi</th>
-                  <th className="py-2.5 px-3 w-[90px] text-center">Görüntülenme</th>
-                  <th className="py-2.5 px-3 w-[100px]">Durum</th>
-                  <th className="py-2.5 px-3 w-[180px] text-right">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#e2e8f0]">
-                {filteredListings.map((item) => {
-                  const isItemActive = (item.status || 'active') === 'active';
-                  const views = item.viewsCount || 54;
+          <div>
+            {/* 1. DESKTOP TABLE VIEW (Visible >= md) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-[12px] border-collapse">
+                <thead>
+                  <tr className="bg-[#f1f5f9] text-[#475569] font-bold text-[11px] border-b border-[#e2e8f0]">
+                    <th className="py-2.5 px-3 w-[80px]">Fotoğraf</th>
+                    <th className="py-2.5 px-3 min-w-[280px]">İlan Başlığı & Detay</th>
+                    <th className="py-2.5 px-3 w-[130px]">Fiyat</th>
+                    <th className="py-2.5 px-3 w-[100px]">İlan Tarihi</th>
+                    <th className="py-2.5 px-3 w-[90px] text-center">Görüntülenme</th>
+                    <th className="py-2.5 px-3 w-[100px]">Durum</th>
+                    <th className="py-2.5 px-3 w-[180px] text-right">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e2e8f0]">
+                  {filteredListings.map((item) => {
+                    const isItemActive = (item.status || 'active') === 'active';
+                    const views = item.viewsCount || 54;
 
-                  return (
-                    <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors">
-                      {/* Photo Thumbnail */}
-                      <td className="py-2.5 px-3">
-                        <Link to={`/ilan/${item.id}`} className="block relative group">
-                          <img
-                            src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
-                            alt={item.title}
-                            onError={handleImageFallback}
-                            className="w-[72px] h-[52px] object-cover rounded-[3px] border border-[#cbd5e1] group-hover:opacity-90"
-                          />
-                          {item.isVitrin && (
-                            <span className="absolute top-0 left-0 bg-[#ea580c] text-white text-[8.5px] font-black px-1 rounded-br-[3px]">
-                              VİTRİN
+                    return (
+                      <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors">
+                        {/* Photo Thumbnail */}
+                        <td className="py-2.5 px-3">
+                          <Link to={`/ilan/${item.id}`} className="block relative group">
+                            <img
+                              src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
+                              alt={item.title}
+                              onError={handleImageFallback}
+                              className="w-[72px] h-[52px] object-cover rounded-[3px] border border-[#cbd5e1] group-hover:opacity-90"
+                            />
+                            {item.isVitrin && (
+                              <span className="absolute top-0 left-0 bg-[#ea580c] text-white text-[8.5px] font-black px-1 rounded-br-[3px]">
+                                VİTRİN
+                              </span>
+                            )}
+                          </Link>
+                        </td>
+
+                        {/* Title & Info */}
+                        <td className="py-2.5 px-3">
+                          <Link
+                            to={`/ilan/${item.id}`}
+                            className="font-bold text-[#1e293b] hover:text-[#ea580c] text-[12.5px] line-clamp-1"
+                          >
+                            {item.title}
+                          </Link>
+                          <div className="flex items-center gap-2 text-[11px] text-[#64748b] mt-0.5">
+                            <span>İlan No: <strong className="text-[#334155]">{item.id}</strong></span>
+                            <span>•</span>
+                            <span>{item.brand} {item.model} ({item.year})</span>
+                            <span>•</span>
+                            <span>{item.city}</span>
+                          </div>
+                        </td>
+
+                        {/* Price */}
+                        <td className="py-2.5 px-3 font-bold text-[#1e293b] whitespace-nowrap">
+                          {formatPrice(item.price, item.currency)}
+                        </td>
+
+                        {/* Date */}
+                        <td className="py-2.5 px-3 text-[#64748b] text-[11.5px] whitespace-nowrap">
+                          {item.date}
+                        </td>
+
+                        {/* Views */}
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 font-bold text-[#475569] text-[11.5px] bg-[#f1f5f9] px-2 py-0.5 rounded-[3px]">
+                            <Eye size={12} className="text-[#0284c7]" />
+                            {views}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          {isItemActive ? (
+                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10.5px] font-bold px-2 py-0.5 rounded-[3px] border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Yayında
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-[10.5px] font-bold px-2 py-0.5 rounded-[3px] border border-gray-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                              Pasif
                             </span>
                           )}
-                        </Link>
-                      </td>
+                        </td>
 
-                      {/* Title & Info */}
-                      <td className="py-2.5 px-3">
+                        {/* Actions */}
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link
+                              to={`/ilan/${item.id}`}
+                              title="İlanı Görüntüle"
+                              className="p-1.5 text-[#64748b] hover:text-[#0284c7] hover:bg-[#f1f5f9] rounded-[3px] transition-colors"
+                            >
+                              <ExternalLink size={14} />
+                            </Link>
+
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(item)}
+                              title="İlanı Düzenle"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-[3px] transition-colors"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(item.id, item.status)}
+                              title={isItemActive ? 'Yayından Kaldır (Pasife Al)' : 'Yeniden Yayına Al'}
+                              className={`p-1.5 rounded-[3px] transition-colors ${
+                                isItemActive
+                                  ? 'text-amber-600 hover:bg-amber-50'
+                                  : 'text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                            >
+                              {isItemActive ? <PauseCircle size={15} /> : <PlayCircle size={15} />}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item.id, item.title)}
+                              title="İlanı Sil"
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-[3px] transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 2. MOBILE CARD VIEW (Visible < md) */}
+            <div className="md:hidden divide-y divide-[#e2e8f0]">
+              {filteredListings.map((item) => {
+                const isItemActive = (item.status || 'active') === 'active';
+                const views = item.viewsCount || 54;
+
+                return (
+                  <div key={item.id} className="p-3.5 space-y-2.5 bg-white">
+                    <div className="flex gap-3">
+                      <Link to={`/ilan/${item.id}`} className="block relative shrink-0">
+                        <img
+                          src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
+                          alt={item.title}
+                          onError={handleImageFallback}
+                          className="w-20 h-16 object-cover rounded-[3px] border border-[#cbd5e1]"
+                        />
+                        {item.isVitrin && (
+                          <span className="absolute top-0 left-0 bg-[#ea580c] text-white text-[8px] font-black px-1 rounded-br-[3px]">
+                            VİTRİN
+                          </span>
+                        )}
+                      </Link>
+
+                      <div className="flex-1 min-w-0">
                         <Link
                           to={`/ilan/${item.id}`}
-                          className="font-bold text-[#1e293b] hover:text-[#ea580c] text-[12.5px] line-clamp-1"
+                          className="font-bold text-[#1e293b] hover:text-[#ea580c] text-[13px] line-clamp-2 leading-tight"
                         >
                           {item.title}
                         </Link>
-                        <div className="flex items-center gap-2 text-[11px] text-[#64748b] mt-0.5">
-                          <span>İlan No: <strong className="text-[#334155]">{item.id}</strong></span>
-                          <span>•</span>
-                          <span>{item.brand} {item.model} ({item.year})</span>
-                          <span>•</span>
-                          <span>{item.city}</span>
+                        <div className="text-[14px] font-black text-[#b91c1c] mt-1">
+                          {formatPrice(item.price, item.currency)}
                         </div>
-                      </td>
+                        <div className="flex items-center gap-1.5 text-[10.5px] text-[#64748b] mt-1 flex-wrap">
+                          <span>{item.city}</span>
+                          <span>•</span>
+                          <span>{item.brand}</span>
+                          <span>•</span>
+                          <span>{item.year}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                      {/* Price */}
-                      <td className="py-2.5 px-3 font-bold text-[#1e293b] whitespace-nowrap">
-                        {formatPrice(item.price, item.currency)}
-                      </td>
-
-                      {/* Date */}
-                      <td className="py-2.5 px-3 text-[#64748b] text-[11.5px] whitespace-nowrap">
-                        {item.date}
-                      </td>
-
-                      {/* Views */}
-                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 font-bold text-[#475569] text-[11.5px] bg-[#f1f5f9] px-2 py-0.5 rounded-[3px]">
-                          <Eye size={12} className="text-[#0284c7]" />
-                          {views}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                    {/* Status & Views Row */}
+                    <div className="flex items-center justify-between pt-1 border-t border-[#f1f5f9] text-[11px]">
+                      <div>
                         {isItemActive ? (
                           <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10.5px] font-bold px-2 py-0.5 rounded-[3px] border border-emerald-200">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -458,60 +569,60 @@ export const MyListingsPage: React.FC<MyListingsPageProps> = ({
                             Pasif
                           </span>
                         )}
-                      </td>
+                      </div>
 
-                      {/* Actions */}
-                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* View Detail */}
-                          <Link
-                            to={`/ilan/${item.id}`}
-                            title="İlanı Görüntüle"
-                            className="p-1.5 text-[#64748b] hover:text-[#0284c7] hover:bg-[#f1f5f9] rounded-[3px] transition-colors"
-                          >
-                            <ExternalLink size={14} />
-                          </Link>
+                      <span className="inline-flex items-center gap-1 font-semibold text-[#475569] text-[10.5px] bg-[#f1f5f9] px-2 py-0.5 rounded-[3px]">
+                        <Eye size={12} className="text-[#0284c7]" />
+                        {views} Görüntülenme
+                      </span>
+                    </div>
 
-                          {/* Edit Listing */}
-                          <button
-                            type="button"
-                            onClick={() => handleStartEdit(item)}
-                            title="İlanı Düzenle"
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-[3px] transition-colors"
-                          >
-                            <Edit3 size={14} />
-                          </button>
+                    {/* Action Buttons Row */}
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEdit(item)}
+                        className="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11.5px] rounded-[3px] flex items-center justify-center gap-1 border border-blue-200 transition-colors"
+                      >
+                        <Edit3 size={13} />
+                        <span>Düzenle</span>
+                      </button>
 
-                          {/* Toggle Active / Passive */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(item.id, item.status)}
-                            title={isItemActive ? 'Yayından Kaldır (Pasife Al)' : 'Yeniden Yayına Al'}
-                            className={`p-1.5 rounded-[3px] transition-colors ${
-                              isItemActive
-                                ? 'text-amber-600 hover:bg-amber-50'
-                                : 'text-emerald-600 hover:bg-emerald-50'
-                            }`}
-                          >
-                            {isItemActive ? <PauseCircle size={15} /> : <PlayCircle size={15} />}
-                          </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(item.id, item.status)}
+                        className={`py-1.5 px-2 font-bold text-[11.5px] rounded-[3px] flex items-center justify-center gap-1 border transition-colors ${
+                          isItemActive
+                            ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+                            : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                        }`}
+                      >
+                        {isItemActive ? (
+                          <>
+                            <PauseCircle size={13} />
+                            <span>Pasife Al</span>
+                          </>
+                        ) : (
+                          <>
+                            <PlayCircle size={13} />
+                            <span>Yayına Al</span>
+                          </>
+                        )}
+                      </button>
 
-                          {/* Delete */}
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item.id, item.title)}
-                            title="İlanı Sil"
-                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-[3px] transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.id, item.title)}
+                        className="py-1.5 px-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11.5px] rounded-[3px] flex items-center justify-center gap-1 border border-red-200 transition-colors"
+                      >
+                        <Trash2 size={13} />
+                        <span>Sil</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
           /* Empty State */

@@ -33,7 +33,7 @@ export const MessagesPage: React.FC = () => {
   const initialConvId = searchParams.get('c') || '';
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversationId, setSelectedConversationId] = useState<string>(initialConvId);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialConvId || null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [replyText, setReplyText] = useState<string>('');
   const [searchFilter, setSearchFilter] = useState<string>('');
@@ -55,7 +55,10 @@ export const MessagesPage: React.FC = () => {
     const unsubscribe = subscribeToUserConversations(currentUserId, (convs) => {
       setConversations(convs);
       if (!selectedConversationId && convs.length > 0) {
-        setSelectedConversationId(convs[0].id);
+        // On desktop, auto-select the first conversation. On mobile, keep conversation list open
+        if (window.innerWidth >= 768) {
+          setSelectedConversationId(convs[0].id);
+        }
       }
     });
 
@@ -187,12 +190,14 @@ export const MessagesPage: React.FC = () => {
         </div>
 
         {/* MAIN CHAT APPLICATION CONTAINER */}
-        <div className="bg-white border border-[#cbd5e1] rounded-[4px] shadow-sm overflow-hidden h-[720px] flex flex-col md:flex-row">
+        <div className="bg-white border border-[#cbd5e1] rounded-[4px] shadow-sm overflow-hidden h-[calc(100vh-160px)] min-h-[500px] md:h-[720px] flex flex-col md:flex-row">
           
           {/* ========================================================= */}
           {/* LEFT PANEL: CONVERSATIONS LIST */}
           {/* ========================================================= */}
-          <div className="w-full md:w-[360px] border-r border-[#e2e8f0] flex flex-col h-full bg-[#f8fafc] shrink-0">
+          <div className={`w-full md:w-[360px] border-r border-[#e2e8f0] flex-col h-full bg-[#f8fafc] shrink-0 ${
+            selectedConversationId ? 'hidden md:flex' : 'flex'
+          }`}>
             {/* Header */}
             <div className="p-3 border-b border-[#e2e8f0] bg-white">
               <div className="flex items-center justify-between mb-2.5">
@@ -315,12 +320,22 @@ export const MessagesPage: React.FC = () => {
           {/* ========================================================= */}
           {/* RIGHT PANEL: ACTIVE CHAT THREAD */}
           {/* ========================================================= */}
-          <div className="flex-1 flex flex-col h-full bg-white">
+          <div className={`flex-1 flex-col h-full bg-white ${
+            selectedConversationId ? 'flex' : 'hidden md:flex'
+          }`}>
             {activeConversation ? (
               <>
                 {/* Active Chat Top Bar */}
                 <div className="p-3 border-b border-[#e2e8f0] bg-white flex items-center justify-between shrink-0 shadow-2xs">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedConversationId(null)}
+                      className="md:hidden p-1.5 -ml-1 text-[#475569] hover:text-[#0f172a] hover:bg-slate-100 rounded transition-colors shrink-0"
+                      title="Konuşmalara Dön"
+                    >
+                      <ArrowLeft size={18} />
+                    </button>
                     <img
                       src={activeConversation.listingImage}
                       alt={activeConversation.listingTitle}

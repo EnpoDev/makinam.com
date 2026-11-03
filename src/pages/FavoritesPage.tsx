@@ -151,101 +151,171 @@ export const FavoritesPage: React.FC<FavoritesPageProps> = ({ listings }) => {
 
         {/* Content */}
         {sortedListings.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[12px] border-collapse">
-              <thead>
-                <tr className="bg-[#f1f5f9] text-[#475569] font-bold text-[11px] border-b border-[#e2e8f0]">
-                  <th className="py-2.5 px-3 w-[80px]">Fotoğraf</th>
-                  <th className="py-2.5 px-3 min-w-[280px]">İlan Başlığı & Özellikler</th>
-                  <th className="py-2.5 px-3 w-[140px]">Fiyat</th>
-                  <th className="py-2.5 px-3 w-[120px]">Şehir / İlçe</th>
-                  <th className="py-2.5 px-3 w-[140px]">Satıcı Bilgisi</th>
-                  <th className="py-2.5 px-3 w-[110px] text-right">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#e2e8f0]">
-                {sortedListings.map((item) => (
-                  <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors">
-                    {/* Thumbnail */}
-                    <td className="py-2.5 px-3">
-                      <Link to={`/ilan/${item.id}`} className="block relative group">
-                        <img
-                          src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
-                          alt={item.title}
-                          onError={handleImageFallback}
-                          className="w-[72px] h-[52px] object-cover rounded-[3px] border border-[#cbd5e1] group-hover:opacity-90"
-                        />
-                        {item.isVitrin && (
-                          <span className="absolute top-0 left-0 bg-[#ea580c] text-white text-[8.5px] font-black px-1 rounded-br-[3px]">
-                            VİTRİN
-                          </span>
-                        )}
-                      </Link>
-                    </td>
+          <div>
+            {/* 1. DESKTOP TABLE VIEW (Visible >= md) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-[12px] border-collapse">
+                <thead>
+                  <tr className="bg-[#f1f5f9] text-[#475569] font-bold text-[11px] border-b border-[#e2e8f0]">
+                    <th className="py-2.5 px-3 w-[80px]">Fotoğraf</th>
+                    <th className="py-2.5 px-3 min-w-[280px]">İlan Başlığı & Özellikler</th>
+                    <th className="py-2.5 px-3 w-[140px]">Fiyat</th>
+                    <th className="py-2.5 px-3 w-[120px]">Şehir / İlçe</th>
+                    <th className="py-2.5 px-3 w-[140px]">Satıcı Bilgisi</th>
+                    <th className="py-2.5 px-3 w-[110px] text-right">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e2e8f0]">
+                  {sortedListings.map((item) => (
+                    <tr key={item.id} className="hover:bg-[#f8fafc] transition-colors">
+                      {/* Thumbnail */}
+                      <td className="py-2.5 px-3">
+                        <Link to={`/ilan/${item.id}`} className="block relative group">
+                          <img
+                            src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
+                            alt={item.title}
+                            onError={handleImageFallback}
+                            className="w-[72px] h-[52px] object-cover rounded-[3px] border border-[#cbd5e1] group-hover:opacity-90"
+                          />
+                          {item.isVitrin && (
+                            <span className="absolute top-0 left-0 bg-[#ea580c] text-white text-[8.5px] font-black px-1 rounded-br-[3px]">
+                              VİTRİN
+                            </span>
+                          )}
+                        </Link>
+                      </td>
 
-                    {/* Title & Specs */}
-                    <td className="py-2.5 px-3">
+                      {/* Title & Specs */}
+                      <td className="py-2.5 px-3">
+                        <Link
+                          to={`/ilan/${item.id}`}
+                          className="font-bold text-[#1e293b] hover:text-[#ea580c] text-[12.5px] line-clamp-1"
+                        >
+                          {item.title}
+                        </Link>
+                        <div className="flex items-center gap-2 text-[11px] text-[#64748b] mt-0.5">
+                          <span className="font-semibold text-[#334155]">{item.brand} {item.model}</span>
+                          <span>•</span>
+                          <span>Yıl: {item.year}</span>
+                          <span>•</span>
+                          <span>{item.hours > 0 ? `${item.hours} Saat` : 'Sıfır Ürün'}</span>
+                        </div>
+                      </td>
+
+                      {/* Price */}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <div className="font-bold text-[#1e293b] text-[13px]">
+                          {formatPrice(item.price, item.currency)}
+                        </div>
+                      </td>
+
+                      {/* City / District */}
+                      <td className="py-2.5 px-3 text-[#475569] text-[11.5px] whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <MapPin size={12} className="text-[#94a3b8]" />
+                          <span>{item.city}, {item.district}</span>
+                        </div>
+                      </td>
+
+                      {/* Seller */}
+                      <td className="py-2.5 px-3 text-[11.5px] whitespace-nowrap">
+                        <div className="font-semibold text-[#334155]">{item.seller?.name || 'Satıcı'}</div>
+                        <div className="text-[10.5px] text-[#64748b]">{item.seller?.type || 'Bireysel'}</div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            to={`/ilan/${item.id}`}
+                            title="İlanı İncele"
+                            className="h-[28px] px-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold rounded-[2px] inline-flex items-center gap-1 transition-colors"
+                          >
+                            <span>İncele</span>
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(item.id, item.title)}
+                            title="Favorilerden Çıkar"
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-[3px] transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 2. MOBILE CARD VIEW (Visible < md) */}
+            <div className="md:hidden divide-y divide-[#e2e8f0]">
+              {sortedListings.map((item) => (
+                <div key={item.id} className="p-3.5 space-y-2.5 bg-white">
+                  <div className="flex gap-3">
+                    <Link to={`/ilan/${item.id}`} className="block relative shrink-0">
+                      <img
+                        src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
+                        alt={item.title}
+                        onError={handleImageFallback}
+                        className="w-20 h-16 object-cover rounded-[3px] border border-[#cbd5e1]"
+                      />
+                      {item.isVitrin && (
+                        <span className="absolute top-0 left-0 bg-[#ea580c] text-white text-[8px] font-black px-1 rounded-br-[3px]">
+                          VİTRİN
+                        </span>
+                      )}
+                    </Link>
+
+                    <div className="flex-1 min-w-0">
                       <Link
                         to={`/ilan/${item.id}`}
-                        className="font-bold text-[#1e293b] hover:text-[#ea580c] text-[12.5px] line-clamp-1"
+                        className="font-bold text-[#1e293b] hover:text-[#ea580c] text-[13px] line-clamp-2 leading-tight"
                       >
                         {item.title}
                       </Link>
-                      <div className="flex items-center gap-2 text-[11px] text-[#64748b] mt-0.5">
-                        <span className="font-semibold text-[#334155]">{item.brand} {item.model}</span>
-                        <span>•</span>
-                        <span>Yıl: {item.year}</span>
-                        <span>•</span>
-                        <span>{item.hours > 0 ? `${item.hours} Saat` : 'Sıfır Ürün'}</span>
-                      </div>
-                    </td>
-
-                    {/* Price */}
-                    <td className="py-2.5 px-3 whitespace-nowrap">
-                      <div className="font-bold text-[#1e293b] text-[13px]">
+                      <div className="text-[14px] font-black text-[#b91c1c] mt-1">
                         {formatPrice(item.price, item.currency)}
                       </div>
-                    </td>
-
-                    {/* City / District */}
-                    <td className="py-2.5 px-3 text-[#475569] text-[11.5px] whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <MapPin size={12} className="text-[#94a3b8]" />
-                        <span>{item.city}, {item.district}</span>
+                      <div className="flex items-center gap-1.5 text-[10.5px] text-[#64748b] mt-1 flex-wrap">
+                        <span>{item.city}</span>
+                        <span>•</span>
+                        <span>{item.brand}</span>
+                        <span>•</span>
+                        <span>{item.year}</span>
                       </div>
-                    </td>
+                    </div>
+                  </div>
 
-                    {/* Seller */}
-                    <td className="py-2.5 px-3 text-[11.5px] whitespace-nowrap">
-                      <div className="font-semibold text-[#334155]">{item.seller?.name || 'Satıcı'}</div>
-                      <div className="text-[10.5px] text-[#64748b]">{item.seller?.type || 'Bireysel'}</div>
-                    </td>
+                  {/* Seller & Action Buttons Row */}
+                  <div className="flex items-center justify-between pt-2 border-t border-[#f1f5f9] gap-2">
+                    <div className="text-[11px] text-[#64748b] truncate">
+                      <span className="font-semibold text-[#334155]">{item.seller?.name || 'Satıcı'}</span>
+                      <span className="text-[10px] text-[#94a3b8] ml-1">({item.seller?.type || 'Bireysel'})</span>
+                    </div>
 
-                    {/* Actions */}
-                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          to={`/ilan/${item.id}`}
-                          title="İlanı İncele"
-                          className="h-[28px] px-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold rounded-[2px] inline-flex items-center gap-1 transition-colors"
-                        >
-                          <span>İncele</span>
-                        </Link>
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemove(item.id, item.title)}
-                          title="Favorilerden Çıkar"
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-[3px] transition-colors"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Link
+                        to={`/ilan/${item.id}`}
+                        className="px-3 py-1.5 bg-[#0284c7] hover:bg-[#0369a1] text-white text-[11px] font-bold rounded-[3px] transition-colors shadow-2xs"
+                      >
+                        İncele
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(item.id, item.title)}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-[3px] border border-red-200 transition-colors"
+                        title="Favorilerden Çıkar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           /* Empty State */
