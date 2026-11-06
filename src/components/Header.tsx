@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, Plus, User, LogIn, Menu, X, Phone, SlidersHorizontal, ChevronDown, ChevronRight, LogOut, FileText, Heart, Building2, Settings, MessageSquare, ShieldCheck, Tag } from 'lucide-react';
+import { Search, Plus, User, LogIn, Menu, X, Phone, SlidersHorizontal, ChevronDown, ChevronRight, LogOut, FileText, Heart, Building2, Settings, MessageSquare, ShieldCheck, Tag, CreditCard } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCategories } from '../context/CategoryContext';
 import { Listing } from '../types';
@@ -543,6 +543,19 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
                         <ChevronRight size={12} className="text-emerald-500" />
                       </button>
                     )}
+                    <button
+                      onClick={() => {
+                        navigate('/saas');
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-[#f1f5f9] flex items-center justify-between text-[#334155]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CreditCard size={13} className="text-[#ea580c]" />
+                        <span>Faturalama & Abonelik (SaaS)</span>
+                      </div>
+                      <ChevronRight size={12} className="text-slate-400" />
+                    </button>
                   </div>
 
                   <div className="border-t border-[#f1f5f9] pt-1">

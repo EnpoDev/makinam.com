@@ -33,6 +33,7 @@ const MakinamGuvendePage = lazy(() => import('./pages/MakinamGuvendePage').then(
 const CorporateStoreApplicationPage = lazy(() => import('./pages/CorporateStoreApplicationPage').then(m => ({ default: m.CorporateStoreApplicationPage })));
 const LegalAgreementsPage = lazy(() => import('./pages/LegalAgreementsPage').then(m => ({ default: m.LegalAgreementsPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
+const SaasPage = lazy(() => import('./pages/SaasPage').then(m => ({ default: m.SaasPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
 const RouteLoadingFallback = () => (
@@ -166,6 +167,12 @@ export const AppContent: React.FC = () => {
       {/* 2. DEDICATED ADMIN & REPRESENTATIVE PANEL */}
       <Route path="/admin" element={<AdminPage listings={listings} />} />
       <Route path="/admin/*" element={<AdminPage listings={listings} />} />
+
+      {/* 3. DEDICATED SAAS & CORPORATE BILLING PORTAL */}
+      <Route path="/saas" element={<SaasPage />} />
+      <Route path="/saas/*" element={<SaasPage />} />
+      <Route path="/saas/giris" element={<SaasPage />} />
+      <Route path="/saas/faturalama" element={<SaasPage />} />
 
       {/* 2. REGULAR MARKETPLACE PAGES (Header & Footer) */}
       <Route
