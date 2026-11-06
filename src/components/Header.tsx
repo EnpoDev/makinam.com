@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, User, LogIn, Menu, X, Phone, SlidersHorizontal, ChevronDown, ChevronRight, LogOut, FileText, Heart, Building2, Settings, MessageSquare, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Search, Plus, User, LogIn, Menu, X, Phone, SlidersHorizontal, ChevronDown, ChevronRight, LogOut, FileText, Heart, Building2, Settings, MessageSquare, ShieldCheck, Tag } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCategories } from '../context/CategoryContext';
 import { Listing } from '../types';
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { normalizeSearchText, extractDigits } from '../utils/search';
 import { subscribeToUserConversations } from '../lib/messageService';
+import { DEFAULT_MACHINE_IMAGE } from '../utils/image';
 
 interface HeaderProps {
   listings?: Listing[];
@@ -57,10 +58,74 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Compute live search autocomplete suggestions
+  const searchSuggestions = useMemo(() => {
+    const q = normalizeSearchText(searchTerm.trim());
+    if (q.length < 2) return null;
+
+    // 1. Matching listings
+    const matchedListings = (listings || [])
+      .filter((l) => {
+        if (l.status === 'passive' || l.status === 'sold') return false;
+        const titleNorm = normalizeSearchText(l.title || '');
+        const brandNorm = normalizeSearchText(l.brand || '');
+        const modelNorm = normalizeSearchText(l.model || '');
+        const idNorm = normalizeSearchText(l.id || '');
+        const adNoNorm = normalizeSearchText(l.adNo || '');
+        return (
+          titleNorm.includes(q) ||
+          brandNorm.includes(q) ||
+          modelNorm.includes(q) ||
+          idNorm.includes(q) ||
+          adNoNorm.includes(q)
+        );
+      })
+      .slice(0, 4);
+
+    // 2. Matching categories & subcategories
+    const matchedCategories: { catId: string; subId?: string; name: string; path: string }[] = [];
+    categories.forEach((cat) => {
+      if (normalizeSearchText(cat.name).includes(q)) {
+        matchedCategories.push({ catId: cat.id, name: cat.name, path: `/ilanlar?cat=${cat.id}` });
+      }
+      cat.subcategories.forEach((sub) => {
+        if (normalizeSearchText(sub.name).includes(q)) {
+          matchedCategories.push({
+            catId: cat.id,
+            subId: sub.id,
+            name: `${sub.name} (${cat.name})`,
+            path: `/ilanlar?cat=${cat.id}&sub=${sub.id}`
+          });
+        }
+      });
+    });
+
+    // 3. Matching brands
+    const allBrands = Array.from(new Set((listings || []).map((l) => l.brand).filter(Boolean)));
+    const matchedBrands = allBrands
+      .filter((b) => normalizeSearchText(b).includes(q))
+      .slice(0, 4);
+
+    const hasAnyResults = matchedListings.length > 0 || matchedCategories.length > 0 || matchedBrands.length > 0;
+
+    return {
+      listings: matchedListings,
+      categories: matchedCategories.slice(0, 3),
+      brands: matchedBrands,
+      hasAnyResults
+    };
+  }, [searchTerm, listings, categories]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,39 +255,173 @@ export const Header: React.FC<HeaderProps> = ({ listings, onOpenPostAd, onOpenAu
           </a>
         </div>
 
-        {/* HIGH-UTILITY SEARCH BAR */}
-        <form
-          onSubmit={handleSearchSubmit}
-          className="hidden lg:flex flex-1 max-w-[620px] items-center"
-        >
-          <div className="w-full flex items-center bg-white rounded-[3px] border border-[#cbd5e1] overflow-hidden focus-within:border-[#ea580c] focus-within:ring-1 focus-within:ring-[#ea580c] shadow-xs">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Kelime, ilan no veya model ara..."
-              className="w-full h-[36px] px-3.5 text-[12px] text-[#1e293b] placeholder-[#94a3b8] bg-white focus:outline-none"
-            />
+        {/* HIGH-UTILITY SEARCH BAR WITH LIVE AUTOCOMPLETE */}
+        <div ref={searchContainerRef} className="relative hidden lg:flex flex-1 max-w-[620px] items-center">
+          <form
+            onSubmit={(e) => {
+              setIsSearchFocused(false);
+              handleSearchSubmit(e);
+            }}
+            className="w-full flex items-center"
+          >
+            <div className="w-full flex items-center bg-white rounded-[3px] border border-[#cbd5e1] overflow-hidden focus-within:border-[#ea580c] focus-within:ring-1 focus-within:ring-[#ea580c] shadow-xs">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setIsSearchFocused(true);
+                }}
+                onFocus={() => setIsSearchFocused(true)}
+                placeholder="Kelime, ilan no veya model ara..."
+                className="w-full h-[36px] px-3.5 text-[12px] text-[#1e293b] placeholder-[#94a3b8] bg-white focus:outline-none"
+              />
+
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 mr-1"
+                  title="Temizle"
+                >
+                  <X size={14} />
+                </button>
+              )}
+
+              <button
+                type="submit"
+                className="h-[36px] px-4 bg-[#ea580c] hover:bg-[#c2410c] text-white flex items-center justify-center transition-colors font-bold text-[12px] gap-1 shrink-0"
+                title="Ara"
+              >
+                <Search size={15} strokeWidth={2.5} />
+                <span>Ara</span>
+              </button>
+            </div>
 
             <button
-              type="submit"
-              className="h-[36px] px-4 bg-[#ea580c] hover:bg-[#c2410c] text-white flex items-center justify-center transition-colors font-bold text-[12px] gap-1 shrink-0"
-              title="Ara"
+              type="button"
+              onClick={() => navigate('/ilanlar')}
+              className="ml-2.5 text-[11px] text-[#cbd5e1] hover:text-white whitespace-nowrap flex items-center gap-1 hover:underline"
             >
-              <Search size={15} strokeWidth={2.5} />
-              <span>Ara</span>
+              <SlidersHorizontal size={12} />
+              Detaylı Arama
             </button>
-          </div>
+          </form>
 
-          <button
-            type="button"
-            onClick={() => navigate('/ilanlar')}
-            className="ml-2.5 text-[11px] text-[#cbd5e1] hover:text-white whitespace-nowrap flex items-center gap-1 hover:underline"
-          >
-            <SlidersHorizontal size={12} />
-            Detaylı Arama
-          </button>
-        </form>
+          {/* AUTOCOMPLETE POPUP DROPDOWN */}
+          {isSearchFocused && searchSuggestions && searchTerm.trim().length >= 2 && (
+            <div className="absolute left-0 right-[100px] top-full mt-1.5 bg-white text-[#1e293b] rounded-[3px] shadow-2xl border border-[#cbd5e1] overflow-hidden z-50 text-[12px] animate-in fade-in duration-100 divide-y divide-[#f1f5f9]">
+              {searchSuggestions.hasAnyResults ? (
+                <>
+                  {/* Matching Categories */}
+                  {searchSuggestions.categories.length > 0 && (
+                    <div className="p-2">
+                      <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider px-2 py-0.5">
+                        Kategoriler
+                      </div>
+                      {searchSuggestions.categories.map((c, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            navigate(c.path);
+                            setIsSearchFocused(false);
+                            setSearchTerm('');
+                          }}
+                          className="w-full text-left px-2 py-1.5 hover:bg-[#f1f5f9] hover:text-[#ea580c] rounded flex items-center justify-between transition-colors"
+                        >
+                          <span className="font-semibold text-[11.5px]">{c.name}</span>
+                          <ChevronRight size={13} className="text-[#94a3b8]" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Matching Brands */}
+                  {searchSuggestions.brands.length > 0 && (
+                    <div className="p-2">
+                      <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider px-2 py-0.5">
+                        Popüler Markalar
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 px-2 py-1">
+                        {searchSuggestions.brands.map((b, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              navigate(`/ilanlar?brand=${encodeURIComponent(b)}`);
+                              setIsSearchFocused(false);
+                              setSearchTerm('');
+                            }}
+                            className="px-2 py-0.5 bg-[#f8fafc] hover:bg-orange-50 border border-[#cbd5e1] hover:border-[#ea580c] hover:text-[#ea580c] rounded text-[11px] font-medium transition-colors"
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Matching Listings */}
+                  {searchSuggestions.listings.length > 0 && (
+                    <div className="p-2">
+                      <div className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider px-2 py-0.5">
+                        İlanlar ({searchSuggestions.listings.length})
+                      </div>
+                      {searchSuggestions.listings.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            navigate(`/ilan/${item.id}`);
+                            setIsSearchFocused(false);
+                            setSearchTerm('');
+                          }}
+                          className="w-full text-left p-2 hover:bg-[#f8fafc] rounded flex items-center justify-between gap-3 transition-colors group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={item.images?.[0] || DEFAULT_MACHINE_IMAGE}
+                              alt=""
+                              className="w-10 h-8 object-cover rounded-[2px] border border-[#cbd5e1] shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="font-semibold text-[#0f172a] group-hover:text-[#ea580c] truncate text-[11.5px]">
+                                {item.title}
+                              </div>
+                              <div className="text-[10px] text-[#64748b]">{item.city} • {item.year}</div>
+                            </div>
+                          </div>
+                          <span className="font-bold text-[#b91c1c] text-[11.5px] shrink-0">
+                            {item.price.toLocaleString('tr-TR')} {item.currency}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer button */}
+                  <div className="p-2 bg-[#f8fafc] text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate(`/ilanlar?q=${encodeURIComponent(searchTerm.trim())}`);
+                        setIsSearchFocused(false);
+                      }}
+                      className="text-[11.5px] font-bold text-[#0284c7] hover:text-[#ea580c] hover:underline"
+                    >
+                      "{searchTerm}" için tüm sonuçları gör »
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="p-4 text-center text-[#64748b] text-[11.5px]">
+                  "{searchTerm}" için eşleşen makine bulunamadı. Enter'a basarak arama yapabilirsiniz.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* RIGHT SIDE USER ACTIONS */}
         <div className="flex items-center gap-2 sm:gap-3">

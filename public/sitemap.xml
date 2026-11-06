@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Ana Sayfa -->
+  <url>
+    <loc>https://makinam.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- İlanlar Portalı -->
+  <url>
+    <loc>https://makinam.com/ilanlar</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Makinam Güvende Güvenli Ticaret -->
+  <url>
+    <loc>https://makinam.com/makinam-guvende</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Kurumsal Mağaza Başvurusu -->
+  <url>
+    <loc>https://makinam.com/kurumsal-magaza-ac</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Yardım ve Sıkça Sorulan Sorular -->
+  <url>
+    <loc>https://makinam.com/yardim</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Ana Makine Kategorileri -->
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=is-insaat-makineleri</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=sanayi-imalat-makineleri</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=gida-endustriyel-mutfak</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=tarim-hayvancilik-makineleri</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=tekstil-konfeksiyon-makineleri</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=agac-mobilya-makineleri</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=elektrik-enerji-jenerator</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=istifleme-depolama-forklift</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=temizlik-hizmet-ekipmanlari</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/ilanlar?cat=yedek-parca-sarf-malzeme</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Yasal Sözleşmeler -->
+  <url>
+    <loc>https://makinam.com/sozlesmeler/kullanim-kosullari</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/sozlesmeler/uyelik-sozlesmesi</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/sozlesmeler/kurumsal-magaza-sozlesmesi</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://makinam.com/sozlesmeler/kvkk-aydinlatma-metni</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+</urlset>

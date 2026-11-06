@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Listing } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -30,7 +30,9 @@ import {
   FileText,
   Camera,
   Edit3,
-  XCircle
+  XCircle,
+  Maximize2,
+  X
 } from 'lucide-react';
 
 interface DetailPageProps {
@@ -231,8 +233,48 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [isGuvendeModalOpen, setIsGuvendeModalOpen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const isItemFavorite = listing ? isFavorite(listing.id) : false;
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'location' | 'safety'>('desc');
+
+  // Keyboard navigation for fullscreen lightbox
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsLightboxOpen(false);
+      } else if (e.key === 'ArrowLeft') {
+        setActiveImageIndex((prev) => (prev === 0 ? (listing?.images?.length || 1) - 1 : prev - 1));
+      } else if (e.key === 'ArrowRight') {
+        setActiveImageIndex((prev) => (prev === (listing?.images?.length || 1) - 1 ? 0 : prev + 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, listing?.images?.length]);
+
+  // Compute similar listings (same category, subcategory, or brand)
+  const displayedSimilarListings = useMemo(() => {
+    if (!listing) return [];
+    let matches = listings.filter((item) => {
+      if (item.id === listing.id || item.status === 'passive' || item.status === 'sold') return false;
+      return (
+        item.category === listing.category ||
+        (listing.brand && item.brand?.toLowerCase() === listing.brand.toLowerCase())
+      );
+    });
+
+    if (matches.length < 5) {
+      const otherListings = listings.filter((item) => {
+        if (item.id === listing.id || item.status === 'passive' || item.status === 'sold') return false;
+        return !matches.some((m) => m.id === item.id);
+      });
+      matches = [...matches, ...otherListings].slice(0, 5);
+    } else {
+      matches = matches.slice(0, 5);
+    }
+    return matches;
+  }, [listings, listing]);
 
   // While database is loading or direct fetch is pending, display the skeleton
   if (isPageLoading) {
@@ -398,33 +440,55 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
         <div className="flex-1 min-w-0">
           {/* Main Photo Gallery */}
           <div className="bg-white border border-[#cbd5e1] rounded-[3px] p-2 mb-3 shadow-xs">
-            <div className="relative aspect-[16/10] bg-[#122438] rounded-[2px] overflow-hidden flex items-center justify-center">
+            <div
+              onClick={() => setIsLightboxOpen(true)}
+              className="relative aspect-[16/10] bg-[#122438] rounded-[2px] overflow-hidden flex items-center justify-center cursor-zoom-in group"
+              title="Fotoğrafı Tam Ekran Büyüt"
+            >
               <img
                 src={listing.images?.[activeImageIndex] || listing.images?.[0] || DEFAULT_MACHINE_IMAGE}
                 alt={listing.title}
                 onError={handleImageFallback}
-                className="max-h-full max-w-full object-contain"
+                className="max-h-full max-w-full object-contain transition-transform duration-200 group-hover:scale-[1.01]"
               />
+
+              {/* Lightbox Trigger Badge */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsLightboxOpen(true);
+                }}
+                className="absolute top-2 right-2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-[2px] transition-colors flex items-center gap-1 text-[10px] z-10"
+                title="Tam Ekran İncele"
+              >
+                <Maximize2 size={13} />
+                <span className="hidden sm:inline">Tam Ekran</span>
+              </button>
 
               {(listing.images?.length || 0) > 1 && (
                 <>
                   <button
-                    onClick={() =>
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setActiveImageIndex((prev) =>
                         prev === 0 ? (listing.images?.length || 1) - 1 : prev - 1
-                      )
-                    }
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-[2px] transition-colors"
+                      );
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-[2px] transition-colors z-10"
                   >
                     <ChevronLeft size={20} />
                   </button>
                   <button
-                    onClick={() =>
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setActiveImageIndex((prev) =>
                         prev === (listing.images?.length || 1) - 1 ? 0 : prev + 1
-                      )
-                    }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-[2px] transition-colors"
+                      );
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-[2px] transition-colors z-10"
                   >
                     <ChevronRight size={20} />
                   </button>
@@ -744,6 +808,76 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
         </div>
       </div>
 
+      {/* 5. SIMILAR / RELATED LISTINGS SECTION */}
+      {displayedSimilarListings.length > 0 && (
+        <div className="mt-8 pt-5 border-t border-[#cbd5e1]">
+          <div className="flex items-center justify-between mb-3.5">
+            <div>
+              <h2 className="text-[15px] font-bold text-[#1e293b] flex items-center gap-2">
+                <span>Benzer Makine İlanları</span>
+                <span className="text-[11px] font-normal text-[#64748b] hidden sm:inline">
+                  (İlginizi çekebilecek alternatif ilanlar)
+                </span>
+              </h2>
+            </div>
+            <Link
+              to={`/ilanlar?cat=${listing.category}`}
+              className="text-[11.5px] text-[#0284c7] hover:text-[#ea580c] font-semibold hover:underline"
+            >
+              Kategorideki Tüm İlanlar »
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+            {displayedSimilarListings.map((simItem: Listing) => (
+              <div
+                key={simItem.id}
+                onClick={() => {
+                  navigate(`/ilan/${simItem.id}`);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="group cursor-pointer flex flex-col bg-white border border-[#cbd5e1] hover:border-[#0284c7] rounded-[2px] p-2 transition-colors shadow-2xs"
+              >
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[2px] bg-gray-100 mb-2 border border-[#f1f5f9]">
+                  <img
+                    src={simItem.images?.[0] || DEFAULT_MACHINE_IMAGE}
+                    alt={simItem.title}
+                    onError={handleImageFallback}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    loading="lazy"
+                  />
+                  {simItem.isGuvende && (
+                    <span className="absolute bottom-1 left-1 bg-emerald-700 text-white text-[8px] font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5 shadow-xs">
+                      <ShieldCheck size={9} /> GÜVENDE
+                    </span>
+                  )}
+                  <span className="absolute bottom-1 right-1 bg-black/75 text-white text-[9px] font-mono px-1 py-0.2 rounded">
+                    {simItem.year}
+                  </span>
+                </div>
+
+                <h3
+                  title={simItem.title}
+                  className="text-[11.5px] font-semibold text-[#1e293b] group-hover:text-[#0284c7] group-hover:underline line-clamp-2 min-h-[30px] leading-tight"
+                >
+                  {simItem.title}
+                </h3>
+
+                <div className="mt-2 pt-1.5 border-t border-[#f1f5f9] flex flex-col">
+                  <span className="font-bold text-[#b91c1c] text-[12.5px]">
+                    {formatPrice(simItem.price, simItem.currency)}
+                  </span>
+                  <div className="flex items-center justify-between text-[10px] text-[#64748b] mt-0.5">
+                    <span>{simItem.city}</span>
+                    <span className="truncate max-w-[80px]">{simItem.brand}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 4. MOBILE STICKY ACTION BAR (Visible only on mobile/tablet < lg) */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#cbd5e1] px-3 py-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center justify-between gap-2.5">
         <div className="min-w-0">
@@ -824,6 +958,115 @@ export const DetailPage: React.FC<DetailPageProps> = ({ listings, isLoading = fa
           )}
         </div>
       </div>
+
+      {/* 6. FULLSCREEN LIGHTBOX MODAL */}
+      {isLightboxOpen && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xs flex flex-col justify-between p-3 sm:p-5 animate-in fade-in duration-150">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between text-white pb-3 border-b border-white/10 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[13px] truncate max-w-[260px] sm:max-w-md">
+                {listing.title}
+              </span>
+              <span className="text-[11px] text-white/60 font-mono">
+                ({activeImageIndex + 1} / {listing.images?.length || 1})
+              </span>
+            </div>
+
+            <button
+              onClick={() => setIsLightboxOpen(false)}
+              className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
+              title="Kapat (ESC)"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          {/* Center Large Photo with Navigation */}
+          <div className="relative flex-1 flex items-center justify-center my-3 overflow-hidden select-none">
+            <img
+              src={listing.images?.[activeImageIndex] || listing.images?.[0] || DEFAULT_MACHINE_IMAGE}
+              alt={listing.title}
+              onError={handleImageFallback}
+              className="max-h-[75vh] max-w-full object-contain shadow-2xl rounded"
+            />
+
+            {(listing.images?.length || 0) > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImageIndex((prev) =>
+                      prev === 0 ? (listing.images?.length || 1) - 1 : prev - 1
+                    );
+                  }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2.5 bg-black/60 hover:bg-black/90 text-white rounded-full transition-colors"
+                  title="Önceki Fotoğraf"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImageIndex((prev) =>
+                      prev === (listing.images?.length || 1) - 1 ? 0 : prev + 1
+                    );
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-black/60 hover:bg-black/90 text-white rounded-full transition-colors"
+                  title="Sonraki Fotoğraf"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Bottom Thumbnails */}
+          {(listing.images?.length || 0) > 1 && (
+            <div className="flex items-center justify-center gap-2 overflow-x-auto py-2 shrink-0">
+              {listing.images?.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={`w-14 h-10 rounded overflow-hidden border-2 transition-all shrink-0 ${
+                    activeImageIndex === idx ? 'border-[#ea580c] scale-105' : 'border-transparent opacity-50 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} alt="" onError={handleImageFallback} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 7. JSON-LD STRUCTURED DATA FOR GOOGLE RICH SEARCH RESULTS */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org/",
+            "@type": "Product",
+            "name": listing.title,
+            "image": listing.images || [],
+            "description": listing.description || `${listing.brand} ${listing.model} ${listing.year} makine ilanı.`,
+            "brand": {
+              "@type": "Brand",
+              "name": listing.brand || "Makinam"
+            },
+            "offers": {
+              "@type": "Offer",
+              "priceCurrency": listing.currency === 'TL' ? 'TRY' : listing.currency,
+              "price": listing.price,
+              "availability": isSold ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+              "itemCondition": "https://schema.org/UsedCondition"
+            }
+          })
+        }}
+      />
 
       {/* Share Modal */}
       <ShareModal
